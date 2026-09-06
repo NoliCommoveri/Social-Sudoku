@@ -175,7 +175,12 @@ conservation and leak tests that `docs/pit/specs/session-1-rules-core.md` §8
 asks for. Session 2 — bots and the local driver — is spec'd in
 [`docs/pit/specs/session-2-bots-and-the-local-driver.md`](docs/pit/specs/session-2-bots-and-the-local-driver.md)
 and is next: `core/bot.js`, bot gating inside `tick`, and `room/local.js`, the
-driver the client talks to and Phase 7 replaces with a socket.
+driver the client talks to and Phase 7 replaces with a socket. Session 3 — the
+table — is spec'd in
+[`docs/pit/specs/session-3-the-table.md`](docs/pit/specs/session-3-the-table.md):
+the setup screen that picks the deck, the hand, the offer board, the two-tap
+trade, and `ui/present.js`, the pure half that carries everything CI could not
+otherwise reach.
 
 ### Phase 6 — GameRoom
 
@@ -238,6 +243,10 @@ run in that order: S6 leaves a database with the schema and the six players in
 it, S7 erases and rebuilds it, S8 needs both plus setup task **A3**, without
 which nobody can get past the gate, and S9 is the editor, which needs somebody
 to be through it.
+
+**S10** is Pit's table and is written ahead of the code it checks, so that its
+layout and timing criteria are not discovered at the point of calling session 3
+done. It runs after S8 and after session 3 is deployed.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

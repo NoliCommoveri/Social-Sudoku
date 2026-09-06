@@ -254,6 +254,56 @@ On the Android phone, in portrait.
 Step 7 is the one this exists for. If they cannot find it, the two ways into the
 editor are in the wrong place, and that is a design change rather than a bug.
 
+### S10 — Check the Pit table on the phone
+
+Pit session 3's acceptance criteria that no test reaches
+(`../../pit/specs/session-3-the-table.md` §10). Do it after session 3 is built
+and deployed. Needs **S8** — the table asks who you are and sends you to the
+gate if it does not know.
+
+The subject is a live screen with a clock under it, so most of this is watching
+rather than checking. On the Android phone, in portrait.
+
+1. **Open `/pit/`.** Tap a bot count, then **Deal**. Look at the tile row first:
+   does it read as "this many players *and* this many fruit", or only as a
+   number?
+2. **Play one full round.** Post an offer, take somebody's offer, and watch what
+   your hand does. The finding is whether you can tell what you just received
+   without being told — §4.4's line is one beat long, and one beat may be too
+   short.
+3. **Look for movement under your thumb.** Nothing should resize or reorder as
+   counts change, and no row should be replaced while you are pressing it. A tap
+   that does nothing is the symptom.
+4. **Let an offer you are paying for expire.** The hand should un-grey, the line
+   should say *Gone*, and nothing should look like an error, because losing a
+   race is normal play.
+5. **Corner one.** Whether the Harvest bar lights *and gets noticed* is the
+   question — it is at the bottom of a screen with a lot happening above it.
+   Then play a session with auto-harvest on and say which one the 11-year-old
+   prefers. That answers `../../pit/design.md` §2.4's toggle.
+6. **Measure the tap targets.** Nothing under 64px, no type under 16px, no
+   horizontal scroll, at four bots and again at eight. Eight is the two-row hand
+   and the scrolling board, and it is the case the layout only survives rather
+   than fits.
+7. **Turn on reduced motion** (Android: Settings → Accessibility) and play a
+   round. The countdown must still be readable; if it vanished, the numeral
+   fallback is wrong.
+8. **On the Chromebook, play a round with the keyboard only** — tab, enter,
+   nothing else. Every control is a real button, so this should work; if it
+   does not, something is a `div`.
+9. **Hand it to the 11-year-old with no explanation and watch them trade.**
+   Where they hesitate is the finding, and "they did not know you had to tap
+   your own cards to pay" is the most useful answer this list can produce.
+10. **Ask the 12-year-old whether the bots feel like people.** Session 2's
+    latency and noise are tuned blind; this is the only reading either gets.
+
+Steps 9 and 10 are what this exists for. A "no" on 9 is §4.3's two-tap
+mechanism reopening, not a bug.
+
+Pit's word for the button — **Harvest!** — is worth asking the little ones about
+while the phone is in their hands (`../../pit/design.md` §2.4). If they call it
+something else every time, that is the name.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The

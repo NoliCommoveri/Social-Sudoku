@@ -1,7 +1,8 @@
 # Trading Game ("Pit-style") — Design Spec
 
-**Status:** design stage, no code. Phase 5 of `../../ROADMAP.md`, built and
-played on one device against bots. `GameRoom` (`../gameroom.md`) is Phase 6 and
+**Status:** Phase 5 of `../../ROADMAP.md`, built and played on one device
+against bots. The rules core is built (`public/pit/core/`); the four sessions
+and their state are in [`specs/README.md`](specs/README.md). `GameRoom` (`../gameroom.md`) is Phase 6 and
 takes this rules module unchanged in Phase 7, when Pit becomes the interface's
 first consumer at `games.immotus.app`.
 
@@ -13,7 +14,7 @@ first consumer at `games.immotus.app`.
 
 - Target players: user, husband, two kids (11 and 12). Bots fill remaining seats.
 - Served under `games.immotus.app` as one game module inside the hub Worker. Rules, bots and client are static files under `public/pit/` and need no server; multiplayer later adds the shared `GameRoom` Durable Object class with rules supplied per-game. Stack in `../architecture.md`.
-- A separate simplified version for a 4- and 5-year-old is planned **last**, as its own mode. Notes in §7.
+- A separate simplified version for a 4- and 5-year-old is planned **last**, as its own mode. Notes in §6.
 - The horse breeding game is **not** part of this hub. It stays on its own subdomain.
 - IP: game mechanics are not copyrightable. Do not use the Parker Brothers name, its commodity set as a set, its card art, or the "Corner the Market" / Bull & Bear card naming and trade dress. The theme is original — the Fruit of the Spirit, §2.1 — so nothing here touches that set.
 
@@ -139,7 +140,7 @@ where every fruit is in play by force.
 - `fruit/<commodity>.webp` — a 172px circular crop of the card's corner roundel,
   fruit only, no text, transparent outside the circle, ~12KB each. This is the
   working asset: hand groups, count badges, offer rows, the target tracker. It
-  carries no text, so §7 uses it unchanged.
+  carries no text, so §6 uses it unchanged.
 
 Both are generated from the ten 1024×1536 masters in `art-src/pit/` — nine faces
 and the back — which are in the repo and not served. The fruit crop is the square 172px on a side centred
@@ -242,11 +243,25 @@ Bots do not self-schedule. The room's tick calls `botAction()`; bot latency is i
 
 ## 4. Client
 
-- Hand grouped by commodity, count badges, tap to select a block.
-- Offer board: one row per live offer, `name` + big count numeral, tap to accept, greyed if you can't match the count.
-- Persistent visible: your own counts per commodity, your target's progress toward 9.
-- Harvest button, dark until legal.
-- Round-end reveal of everyone's final hands — this is where the count history retroactively becomes readable and is a large part of the fun.
+- **The hand is a fixed row of slots**, one per commodity in play, in value
+  order, zeros included and greyed. Position is how a pre-reader finds a thing,
+  so the row never reorders itself as counts change.
+- **The hand is also the target tracker.** The largest group carries a ring and
+  reads `7/9`; there is no second widget saying the same number.
+- Offer board: one row per live offer, face and name and a big count numeral,
+  greyed when you cannot match the count. Your own row carries Withdraw.
+- Harvest button, present from the first render and dark until legal.
+- Round-end reveal of everyone's final hands — this is where the count history
+  retroactively becomes readable and is a large part of the fun.
+
+**Recommendation: two taps for both actions, and the hand is the only place a
+commodity is ever named.** Offering is tap a group, tap a count. Accepting is
+tap an offer, tap the group you will pay from. One mechanism, no drag, no
+long-press, and a screen little-kid mode (§6) can inherit without a rewrite.
+*Alternative:* drag a block onto an offer, which is more physical and reads
+better on a Chromebook. *Revisit if:* the 11-year-old does not work out that
+they pay from their own hand — `specs/session-3-the-table.md` §4.3 is the
+detail, and S10 step 9 is the reading.
 
 **Which art goes where.** Live play uses `fruit/` and nothing else: the circular
 crop reads at 40px, carries no text, and nine of them fit across a 360px phone.
