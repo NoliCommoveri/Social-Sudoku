@@ -205,28 +205,25 @@ out on purpose rather than after someone's brother posts a 4-second 9×9.
 
 Dashboard actions, in order. None has a CLI step.
 
-- **A1 — Create the D1 database.** D1 → Create → `gameroom`. Paste the id into
+- **A1 — Retire the old `social-sudoko` Worker.** *First, before A2.*
+  `wrangler.jsonc` names the Worker `carson-gameroom`, matching the repo, but
+  **changing `name` does not rename anything on Cloudflare.** The deploy that
+  carried the change created a *second* Worker under the new name and left the
+  old one running.
+
+  Confirm `carson-gameroom` serves the site, confirm its build connection points
+  at this repo, then delete `social-sudoko`.
+
+  The order matters and the window is now: the orphan is an empty static-file
+  server with no bindings, no secrets and no domain, so deleting it costs
+  nothing. After A2–A4 it would hold the D1 binding, the Durable Object
+  namespace and the domain, none of which follow to the new Worker.
+
+- **A2 — Create the D1 database.** D1 → Create → `gameroom`. Paste the id into
   `wrangler.jsonc`. *Phase 2.*
-- **A2 — Set two secrets.** Worker → Settings → Variables and Secrets →
+- **A3 — Set two secrets.** Worker → Settings → Variables and Secrets →
   Encrypted. `FAMILY_PASSPHRASE` and `SESSION_SECRET` (any long random string).
   *Phase 2.*
-- **A3 — Add the custom domain.** Worker → Settings → Domains & Routes → Add
+- **A4 — Add the custom domain.** Worker → Settings → Domains & Routes → Add
   custom domain → `games.immotus.app`. The zone is already on Cloudflare, so the
   DNS record and certificate are automatic. *Phase 2.*
-- **A4 — Rename the Worker.** *Optional, and if done, do it first.* Currently
-  `social-sudoko`, which is both a typo and no longer what this is.
-
-  **Changing `name` in `wrangler.jsonc` does not rename anything.** The next
-  deploy creates a *second* Worker under the new name and leaves the old one
-  running. So the cost of this depends entirely on when it happens: today the
-  Worker has no bindings, no secrets and no custom domain, so the orphan is an
-  empty static-file server and deleting it costs nothing. After A1–A3 it holds
-  the D1 binding, the Durable Object namespace and the domain, none of which
-  follow to the new Worker.
-
-  If you do it: change `name`, push, confirm `carson-gameroom` serves the site,
-  confirm its build connection points at the repo, then delete `social-sudoko`.
-  Do this **before** A1, or not at all.
-
-  Skipping it is defensible. Once `games.immotus.app` is live the Worker name is
-  visible only in the dashboard list and the unused `.workers.dev` subdomain.

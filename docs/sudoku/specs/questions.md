@@ -21,9 +21,9 @@ This file is the current unknowns, not a log of resolved ones.
 The repo builds and deploys on push to `main`, serving at a `.workers.dev` URL.
 Build command empty, deploy command the wrangler default, both correct.
 
-The remaining Cloudflare setup — the D1 database, the two secrets, the custom
-domain `games.immotus.app`, and the Worker rename — is hub work and lives in
-`../../architecture.md` §8, not here.
+The remaining Cloudflare setup — retiring the old `social-sudoko` Worker, the
+D1 database, the two secrets, and the custom domain `games.immotus.app` — is hub
+work and lives in `../../architecture.md` §8, not here.
 
 ### S2 — Verify slice 1 on the phone and the Chromebook
 
@@ -190,7 +190,7 @@ data anywhere and therefore no migration to perform.
 
 `games.immotus.app`, the hub's address. The zone is already on Cloudflare, so
 adding it to the Worker is a dashboard action with no code impact
-(`../../architecture.md` §8, A3). Sudoku sits at `/sudoku/` under it.
+(`../../architecture.md` §8, A4). Sudoku sits at `/sudoku/` under it.
 
 ### Q9 — PWA icons
 
