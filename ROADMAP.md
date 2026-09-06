@@ -172,8 +172,10 @@ exists rather than against `docs/gameroom.md` alone.
 **Session 1 is built.** `public/pit/core/` holds the deal, the offer board, the
 blind swap, the corner, the scoring and the confidentiality boundary, with the
 conservation and leak tests that `docs/pit/specs/session-1-rules-core.md` §8
-asks for. Session 2 — bots and the local driver — is next and is not yet
-spec'd.
+asks for. Session 2 — bots and the local driver — is spec'd in
+[`docs/pit/specs/session-2-bots-and-the-local-driver.md`](docs/pit/specs/session-2-bots-and-the-local-driver.md)
+and is next: `core/bot.js`, bot gating inside `tick`, and `room/local.js`, the
+driver the client talks to and Phase 7 replaces with a socket.
 
 ### Phase 6 — GameRoom
 
