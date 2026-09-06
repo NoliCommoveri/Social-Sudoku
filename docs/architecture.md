@@ -133,10 +133,28 @@ it exports two lists with opposite rules. `MIGRATIONS` is checksummed and
 applied once; an edit after it has run shows as drift. `SEEDS` is every-insert-
 `ON CONFLICT DO NOTHING` and re-runs whole on every press.
 
-Clear-and-rebuild stays the schema-change path, with one difference that now
-matters more than it did: **the JSON export is a hard precondition for erase**,
-because from Phase 3 the database holds the only copy of the play record and
-that cannot be regenerated. Wire export into the erase confirmation itself.
+Clear-and-rebuild is the schema-change path, and **the JSON export is a hard
+precondition for erase** rather than an advisory one, because from Phase 3 the
+database holds the only copy of the play record and that cannot be regenerated.
+
+The export is wired into the erase confirmation by a cookie, which is the only
+way to make it unskippable with no client JavaScript and no secret.
+`GET /admin/export` hands back the backup and sets a ten-minute cookie holding
+the fingerprint of the snapshot it just served — the document with its timestamp
+removed, so two exports of unchanged data agree. `/admin/erase/confirm` refuses
+without that cookie, refuses when it no longer matches the live database because
+somebody finished a game in between, and refuses until the word `erase` is
+typed. It is a guardrail against forgetting rather than a lock: anyone who can
+reach `/admin` can erase, which was already true of **Apply pending**.
+
+Import is the mirror, and it is deliberately tolerant. The reason anybody erases
+is that the schema changed, so the backup in hand almost always describes a
+slightly different database; an import that refused on mismatch would be useless
+exactly when it is needed. Tables and columns the schema no longer has are
+skipped and named on the page, columns it has gained take their defaults, and
+every insert is `INSERT OR IGNORE`, so importing twice changes nothing the
+second time and a half-applied import is finished by pressing the button again.
+`docs/hub/specs/phase-2-session-b-erase-export.md` is the whole design.
 
 The admin page is at `/admin`. It renders before login and before any table
 exists, and shows the failing statement and its error on the page. There is no
@@ -155,8 +173,9 @@ The modules:
 
 ```
 worker/index.js          routing
-worker/admin.js          the page and its two posts
+worker/admin.js          the page and its seven routes
 worker/db/plan.js        pure: splitter, checksums, applied/pending/drifted
+worker/db/backup.js      pure: the export document, its fingerprint, the import plan
 worker/db/migrations.js  the only module that imports .sql; no logic
 worker/db/apply.js       everything that touches D1
 worker/db/sql/           001_schema.sql, seed_players.sql

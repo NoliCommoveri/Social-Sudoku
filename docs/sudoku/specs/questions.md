@@ -127,19 +127,25 @@ Step 6 is the one worth the trouble. It is what pays for the machinery that
 names the failing statement, and there is nowhere else to see an error from a
 migration.
 
-Steps 5 and 6 both need a way back to a clean database, which Session B's
-**Erase everything** provides. Until it exists, the way back is deleting the D1
-database in the dashboard and creating it again — cheap while the only rows in
-it are six seeded placeholders, and the reason these checks are worth doing now
-rather than after Phase 3.
+Steps 5 and 6 both need a way back to a clean database. **Erase everything** is
+it, and it is built — take the backup it asks for first, then Erase → Apply
+pending → Run seed. Doing these checks now rather than after Phase 3 is still
+the cheap moment: the only rows in the database are six seeded placeholders.
 
 ### S7 — Check erase, export and re-import on the deployment
 
 Phase 2 Session B's acceptance criteria 2–8
 (`../../hub/specs/phase-2-session-b-erase-export.md` §9). Same loop as **S6** —
-push, wait for the build, open the page — and reachable once Session B is on
-`main`. Do **S6** first: this needs a database with the schema applied and the
-six players seeded, which is what S6 leaves behind.
+push, wait for the build, open the page — and reachable as soon as this is on
+`main` and Cloudflare has built it. Do **S6** first: this needs a database with
+the schema applied and the six players seeded, which is what S6 leaves behind.
+
+Every route was driven end to end against a real SQLite before it shipped —
+apply, seed, export, all three erase refusals, erase with live foreign keys, the
+round trip back, a second import, an import into a moved schema, and two broken
+files. What that could not check is D1 itself: whether it answers
+`PRAGMA table_info`, whether a downloaded response sets a cookie on the phone,
+and whether the file input works there. Those are why this list exists.
 
 1. **Open `/admin`.** Backup, Restore and a red Danger panel are below the
    existing table. Nothing is red that should not be.

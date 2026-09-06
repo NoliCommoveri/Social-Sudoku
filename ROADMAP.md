@@ -16,11 +16,12 @@ A sudoku at `/sudoku/`, deployed and playable, behind a placeholder front page:
 - In-progress boards saved per size and tier in `localStorage`.
 - A one-link hub page at `public/index.html`. It is a placeholder; the designed
   shelf is Phase 2.
-- 84 tests under `test/`, run by GitHub Actions on every push.
+- 115 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
-  and the admin page at `/admin` that applies it — `worker/`.
+  and the admin page at `/admin` that applies it, seeds it, backs it up, erases
+  it and restores it — `worker/`.
 
 No Durable Object, no identity, no stored results. Nothing a player would miss
 has been written anywhere yet.
@@ -82,16 +83,18 @@ page renders before login and before any table exists, and puts the failing
 statement and its error on the page. **A2** is done; the database is empty until
 **S6** applies the schema from `/admin`.
 
-**Session B — erase, export, re-import.** Medium, ~45k. Spec'd, not started:
-[`docs/hub/specs/phase-2-session-b-erase-export.md`](docs/hub/specs/phase-2-session-b-erase-export.md).
-The third button, the JSON export that is its precondition, and re-import — one
-session because `CLAUDE.md` forbids the cuts between them. The export download
-sets a short-lived cookie that the erase confirmation requires, which is how the
-backup becomes unskippable with no client JavaScript and no secret; import is
-tolerant of a schema that moved, because a schema that moved is why anyone
-erased. Blocked on nothing, and it unblocks **S6** steps 5 and 6, which need a
-way back to a clean database. Must land before Phase 3 — the first phase writing
-a row anyone would miss.
+**Session B — erase, export, re-import.** Medium, ~45k. ✅ Built.
+[`docs/hub/specs/phase-2-session-b-erase-export.md`](docs/hub/specs/phase-2-session-b-erase-export.md)
+is the design. `worker/db/backup.js` is the pure half — the export document, its
+fingerprint, and the import plan — and `apply.js` gained the three D1 halves.
+The export download sets a ten-minute cookie holding the fingerprint of the
+snapshot it served, and the erase confirmation refuses without it, refuses when
+the database has changed since, and refuses until the word `erase` is typed:
+that is how the backup is unskippable with no client JavaScript and no secret.
+Erase drops one table per statement, retrying until a pass drops nothing new,
+because a batch that fails whole never makes progress against a foreign key.
+Import is tolerant of a schema that moved, which is the case that actually
+happens, and is `INSERT OR IGNORE` throughout. **S7** is the browser half.
 
 **Session C — gate, picker, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
 signing, the `gate` and `who` cookies, `/api/players` read-only, the picker, the

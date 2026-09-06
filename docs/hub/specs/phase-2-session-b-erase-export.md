@@ -157,6 +157,11 @@ fingerprint, and refuses unless all three hold:
 | its value equals the fresh fingerprint | The database changed since that backup — somebody finished a game. Download again. |
 | the typed word is `erase` | Type `erase` to confirm. |
 
+`SameSite=Strict` is doing a second job there: a POST from another site does not
+carry the cookie, so the one route that destroys data refuses a cross-site press
+by the same check that refuses a forgetful one. The routes that only write have
+nothing in front of them, which is the same as it was before this session.
+
 The cookie is what turns "wire the export into the erase confirmation itself"
 from a link somebody can walk past into a step they cannot skip, with no client
 JavaScript and no secret — Session C's `SESSION_SECRET` does not exist yet and

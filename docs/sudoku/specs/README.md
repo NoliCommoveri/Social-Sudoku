@@ -13,7 +13,7 @@ live only as the one-line entry in §6.
 | 5 | [`slice-05-solver.md`](slice-05-solver.md) | Small–Medium | Spec'd, not started |
 | 6 | [`slice-06-technique-library-hints.md`](slice-06-technique-library-hints.md) | Medium | Spec'd, not started |
 | 7 | [`slice-07-storage-foundation.md`](slice-07-storage-foundation.md) | Medium | **Superseded** — rewritten for D1 as hub Phase 2 |
-| 8 | Erase, JSON export, re-import | — | Absorbed into hub Phase 2, and spec'd there: [`../../hub/specs/phase-2-session-b-erase-export.md`](../../hub/specs/phase-2-session-b-erase-export.md) |
+| 8 | Erase, JSON export, re-import | — | Built as hub Phase 2 Session B: [`../../hub/specs/phase-2-session-b-erase-export.md`](../../hub/specs/phase-2-session-b-erase-export.md) |
 | 9 | Timer + stats + best times | — | Became hub Phase 3 |
 | 10 | WebSocket sync + race mode | — | Became hub Phase 8 |
 | 11 | PWA | — | Became hub Phase 10 |
@@ -51,9 +51,9 @@ and a criterion nobody owns is a criterion that gets assumed. S1 connected the
 repo to Cloudflare and is done; S2 is slice 1's four device checks; S4 is slice
 2's two; S5 is slice 3's, and it is the one that decides whether the easy tier
 is easy enough. **S2, S4 and S5 are all still open**; they are about the board,
-which nothing since has touched. **S6 is the hub's first**, and the only one in
-the file that is not about sudoku: Phase 2's database and admin page can be
-checked nowhere but a deployment. Slice 6's library legibility on the phone
+which nothing since has touched. **S6 and S7 are the hub's**, and the only ones in
+the file that are not about sudoku: Phase 2's database, admin page, erase,
+export and import can be checked nowhere but a deployment. Slice 6's library legibility on the phone
 needs the same treatment when it starts, and the hub's own checks are in
 `../../design-language.md` §5.
 
