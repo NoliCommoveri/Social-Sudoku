@@ -101,7 +101,7 @@ are `seed_*.sql`.
 
 ```jsonc
 {
-  "name": "social-sudoko",
+  "name": "carson-gameroom",
   "main": "src/worker/index.js",
   "compatibility_date": "2026-09-03",
   "assets": { "directory": "./public" },

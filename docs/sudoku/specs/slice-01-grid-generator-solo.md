@@ -25,7 +25,7 @@ order is: this slice's code merges → S1 → S2 → slice 1 is done. Criteria 1
 
 A page you open, that deals a 9×9 puzzle you can solve with keyboard or touch,
 that tells you when you have solved it, and that is still there when you come
-back to the tab. Deployed at `social-sudoko.<subdomain>.workers.dev` on every
+back to the tab. Deployed at `carson-gameroom.<subdomain>.workers.dev` on every
 push to `main`. No accounts, no timing, no server logic, no difficulty picker.
 
 Building 9×9 first rather than 4×4 is deliberate: 4×4 is easier to eyeball but
@@ -74,7 +74,7 @@ would publish them.
 
 ```jsonc
 {
-  "name": "social-sudoko",
+  "name": "carson-gameroom",
   "compatibility_date": "2026-09-03",
   "assets": { "directory": "./public" }
 }

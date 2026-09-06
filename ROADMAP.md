@@ -17,8 +17,8 @@ A sudoku at `/sudoku/`, deployed and playable, behind a placeholder front page:
 - A one-link hub page at `public/index.html`. It is a placeholder; the designed
   shelf is Phase 2.
 - 46 tests under `test/`, run by GitHub Actions on every push.
-- A Worker serving `public/` at a `.workers.dev` URL, built by Cloudflare's
-  GitHub integration on push to `main`.
+- A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
+  by Cloudflare's GitHub integration on push to `main`.
 
 No database, no Durable Object, no identity, no stored results. Nothing a
 player would miss has been written anywhere yet.
@@ -66,8 +66,8 @@ The first phase with a server in it. Delivers **H1** and **H3**.
 - The hub landing page — the game shelf.
 - Custom domain `games.immotus.app`.
 
-Setup tasks in `docs/architecture.md` §8. One of them, the optional Worker
-rename, is cheapest *before* this phase rather than during it.
+Setup tasks in `docs/architecture.md` §8. A1 — deleting the Worker left orphaned
+by the rename — comes before the rest of them and before any binding exists.
 
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
 sibling, both rewritten for D1. Medium, likely two sessions.
