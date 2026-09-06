@@ -24,6 +24,10 @@ The Pit document said everything migrates to a new repo. It should not.
 The repo becomes `carson-gameroom` (Settings → Rename). The old name keeps
 working as a redirect, so nothing breaks at the moment of the rename.
 
+**The Worker is a separate question.** Renaming the GitHub repo does not
+rename the Cloudflare Worker, and the Worker rename is optional — see
+`architecture.md` §8, A4. Nothing in this phase depends on it.
+
 ## Before touching anything: the tag
 
 **Tag the current commit first.** GitHub web UI → Releases → Draft a new release
@@ -108,8 +112,9 @@ Listed because each is a tempting thing to fold in, and each would ruin the
 diff's reviewability.
 
 - No `worker/index.js`. No D1. No Durable Object. No `wrangler.jsonc` bindings.
-- No Worker rename — that has a trap and belongs in Phase 2 (see
-  `architecture.md` §8, A4).
+- No Worker rename. It is optional, it is not a rename (it creates a second
+  Worker), and if it is done at all it belongs *before* Phase 2 rather than
+  inside it — `architecture.md` §8, A4.
 - No custom domain.
 - No hub design work beyond a placeholder link.
 - No pencil marks, and no touching `board.js` at all — the device checks S2, S4

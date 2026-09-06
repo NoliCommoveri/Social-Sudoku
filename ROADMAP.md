@@ -67,6 +67,9 @@ The first phase with a server in it. Delivers **H1** and **H3**.
 - The hub landing page — the game shelf.
 - Custom domain `games.immotus.app`.
 
+Setup tasks in `docs/architecture.md` §8. One of them, the optional Worker
+rename, is cheapest *before* this phase rather than during it.
+
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
 sibling, both rewritten for D1. Medium, likely two sessions.
 

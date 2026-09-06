@@ -213,12 +213,20 @@ Dashboard actions, in order. None has a CLI step.
 - **A3 — Add the custom domain.** Worker → Settings → Domains & Routes → Add
   custom domain → `games.immotus.app`. The zone is already on Cloudflare, so the
   DNS record and certificate are automatic. *Phase 2.*
-- **A4 — Rename the Worker.** Currently `social-sudoko`, which is both a typo
-  and no longer what this is.
+- **A4 — Rename the Worker.** *Optional, and if done, do it first.* Currently
+  `social-sudoko`, which is both a typo and no longer what this is.
 
-  **This one has a trap.** Changing `name` in `wrangler.jsonc` does not rename
-  the Worker — the next deploy *creates a new one* and leaves the old running
-  with the bindings attached. So: do it as its own deliberate step during Phase
-  2, alongside A1–A3, confirm `carson-gameroom` is serving with its D1 and DO
-  bindings live, then delete `social-sudoko` from the dashboard. Do not fold
-  this into the Phase 1 file move.
+  **Changing `name` in `wrangler.jsonc` does not rename anything.** The next
+  deploy creates a *second* Worker under the new name and leaves the old one
+  running. So the cost of this depends entirely on when it happens: today the
+  Worker has no bindings, no secrets and no custom domain, so the orphan is an
+  empty static-file server and deleting it costs nothing. After A1–A3 it holds
+  the D1 binding, the Durable Object namespace and the domain, none of which
+  follow to the new Worker.
+
+  If you do it: change `name`, push, confirm `carson-gameroom` serves the site,
+  confirm its build connection points at the repo, then delete `social-sudoko`.
+  Do this **before** A1, or not at all.
+
+  Skipping it is defensible. Once `games.immotus.app` is live the Worker name is
+  visible only in the dashboard list and the unused `.workers.dev` subdomain.
