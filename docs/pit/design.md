@@ -208,7 +208,7 @@ These add real depth but they also add a second information channel and a lot of
 
 ### 2.6 A seat that stops trading
 
-**Open.** A player's cards move only when that player trades, so a seat that
+**Decided.** A player's cards move only when that player trades, so a seat that
 stops — a phone put down, a 5-year-old distracted, a disconnect in Phase 7 —
 freezes nine cards where they sit. Nobody can corner a commodity somebody else
 is holding one of, and a round with no corner has nothing that ends it: expiry
@@ -239,40 +239,83 @@ link. Three seats is not merely worse — at 3.11% it does not work, and
 4, 5 and 6 seats all reached a corner inside five simulated minutes. There is no
 separate bot-deadlock to guard against; the idle seat is the whole failure.
 
-Nothing in the rules module addresses this, and the local driver has no opinion
-about it either. `specs/session-2-bots-and-the-local-driver.md` §6 plays its
-end-to-end session with a human seat that takes the occasional trade, which is
-what a person does and is not a fix.
+None of what follows is built. The rules module has no pause, no idle timer
+and no abandon, and the local driver has no opinion about any of them —
+`specs/session-2-bots-and-the-local-driver.md` §6 plays its end-to-end session
+with a human seat that takes the occasional trade, which is what a person does
+and is not a fix.
 
-The candidates, cheapest first:
+**The fix.** Three mechanisms, one per way a seat stops. Together they also
+answer what happens to an abandoned session, which is the same question.
 
-- **A stall clock.** No trade in the room for *N* seconds redeals the round, no
-  score. One number and one branch in `tick`; loses whatever the round had built.
-- **A stall clock that scores.** Same trigger, but the largest holding at the
-  table takes the corner value. Rewards sitting on a big pile, which is the
-  opposite of the game.
-- **Fill the seat with a bot.** A seat idle for *N* seconds starts being played
-  by `botAction`. Keeps the round alive and is the only candidate that helps the
-  Phase 7 disconnect too. Costs a rule about how the seat is handed back.
+- **Pause.** A room-level pause any seat can set and **any** seat can lift —
+  not only the seat that set it, or one child holds the game hostage. This is
+  the answer to the deliberate absence, which is most of them: a phone put
+  down on purpose, a meal, a bathroom.
+- **Bot takeover at 60s.** A seat that has not acted for sixty seconds starts
+  being played by `botAction`, and **scores nothing for that round even if its
+  bot corners**. Any valid action from the seat reclaims it immediately. This
+  is the answer to the absence nobody chose — a screen lock, a dropped
+  connection, a Phase 7 disconnect after the room's grace timer expires.
+- **Abandon game.** Ends the session with no writes. Needs a second seat to
+  confirm, for the same reason pause needs any seat to be able to lift it.
 
-*Rec:* the third, decided when session 4 settles what happens to an abandoned
-session, because it is the same question asked twice.
+**The takeover penalty is not anti-cheat.** Walking away cannot help a player,
+so there is nothing to deter. It is there because a bot-won round still *ends*
+— cards redeal, the rest of the table keeps playing — and the cost of that
+falls on the seat that left rather than on everyone else. The penalty is per
+round: the moment the player touches the screen they hold the seat again and
+score normally from the next round. An uncontested corner on a taken-over seat
+awards nothing rather than passing to second place.
 
-Two measurements decide between them. **Room-wide quiet does not scale with the
-table.** The longest gap between trades inside rounds that resolved normally is
-9s at five seats, 21.5s at four, and 41.5s at three, where rounds themselves run
-to 286s. A single *N* on room-wide quiet either redeals live three-seat rounds
-or takes minutes to fire at five, so the first two candidates need a threshold
-per seat count that the third does not: a seat's own idleness is one seat's
-behaviour and does not stretch with the table.
+**Why sixty seconds.** The trigger is one seat's idleness, not room-wide quiet,
+and a seat that is still playing cannot sit still for long: `OFFER_TTL_MS` is
+20s, so a live seat re-offers inside a TTL cycle. Across 1,596 rounds that
+resolved normally, at 3 through 6 seats, the longest any single seat went
+without acting was **23.5s**, and no round anywhere had a seat idle past 45s.
 
-**Hand-back is the cheap half.** `apply` already carries `now`, so a
-`lastActionAt` per seat and "any valid action reclaims the seat" is the whole
-rule. The expensive half is the threshold: a human thinking for forty seconds at
-a three-seat table is indistinguishable from an abandoned one, and in little-kid
-mode (§6) an idle seat is the normal state rather than the exception — a
-5-year-old will read the fill as the game taking their cards. *N* is a per-mode
-number, not a constant.
+| Seats | p50 | p90 | p99 | max |
+|---|---|---|---|---|
+| 3 | 4s | 20.5s | 22s | 23.5s |
+| 4 | 5.5s | 14.5s | 21.5s | 22.5s |
+| 5 | 6s | 14s | 21s | 22s |
+| 6 | 7s | 17s | 22s | 23s |
+
+Sixty leaves 2.5× margin on the worst bot round. The risk it does not cover is
+human, not mechanical: a player who lets an offer expire while thinking is
+already past 20s, and two cycles of that is 40s. Which is why —
+
+**`idleSince` goes in the view.** A median round is seventeen seconds of
+trading, so sixty seconds of a frozen board is several rounds' worth of dead
+air, and a seat vanishing without explanation reads as a bug. The view carries
+each seat's idle time so the client can run a visible countdown on it. Sixty
+seconds of "Bo is away — taking over in 12" is a different experience from
+sixty seconds of nothing, and it gives a thinking player something to react to.
+
+*Rec:* the client sends a no-op `present` action on any interaction — a tap, a
+scroll — which validates always and only stamps the seat. Without it a player
+deliberating with their thumb on the screen is indistinguishable from one whose
+phone is in a pocket. *Alternative:* rely on the countdown, since a seat holding
+nine cards always has a legal `offer` and a seat with a live offer always has a
+legal `withdraw`, so a reclaiming action is always available. *Would revisit
+if:* the countdown turns out to be enough in play.
+
+**Pause has to move the clocks.** `OFFER_TTL_MS`, `roundEndsAt` and the idle
+timer are all `now`-based. A pause that only sets a flag resumes into every
+offer expiring at once and every seat tripping the idle timer together. Pause
+stamps `pausedAt`; resume adds the elapsed span to every deadline in state.
+This exists before the button does, or the button is worse than the hang.
+
+**All three are rules actions.** `pause`, `resume` and `abandon` join `offer`,
+`accept` and `ready` in `validate` and `apply`, because the timestamps they
+move live in State. The room still owns sockets, grace and deleting the room.
+The no-writes property of abandon then falls out of code that already exists:
+`isComplete` returns null unless `phase === 'over'`, so an abandon that sets
+`phase: 'abandoned'` writes nothing without anyone having to remember a rule.
+
+**Would revisit if:** a seat stays gone for several rounds. Every round its bot
+wins is a round nobody scores, and at some point abandoning is the honest
+outcome. No count is set on that yet; abandon covers it by hand.
 
 ---
 
