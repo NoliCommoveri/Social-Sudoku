@@ -212,18 +212,37 @@ These add real depth but they also add a second information channel and a lot of
 stops — a phone put down, a 5-year-old distracted, a disconnect in Phase 7 —
 freezes nine cards where they sit. Nobody can corner a commodity somebody else
 is holding one of, and a round with no corner has nothing that ends it: expiry
-returns offers to hands and the trading phase has no clock on it.
+returns offers to hands and the trading phase has no clock on it. `roundEndsAt`
+governs the reveal, not the trading.
 
-It is not an edge case at four seats. Measured over forty seeded deals with one
-frozen seat and three bots trading, **eleven rounds reached a corner and
-twenty-nine could not** — with four commodities and nine cards each, the frozen
-hand has to happen to hold none of some commodity for the round to be winnable
-at all. Bigger tables are safer; three seats are worse.
+**The round is decided at the deal, not by play.** A corner is nine of one
+commodity in one hand, so a frozen hand holding at least one of every commodity
+makes every commodity unreachable before a card has moved. With one seat frozen
+from the deal, the chance that any corner remains possible is exact:
 
-Nothing in the rules module addresses this today, and the local driver has no
-opinion about it either — `specs/session-2-bots-and-the-local-driver.md` §6
-plays its end-to-end session with a human seat that takes the occasional trade,
-which is what a person does and is not a fix.
+| Seats | Corner possible | Round reached one |
+|---|---|---|
+| 3 | 3.11% | 3.0% |
+| 4 | **19.60%** | **17.0%** |
+| 5 | 47.88% | 39.0% |
+| 6 | 75.18% | 65.5% |
+
+Left column: inclusion–exclusion over a nine-card hand drawn from nine of each
+of *n* commodities. Right column: 200 seeded deals per row, one frozen seat and
+the rest `normal` bots, three simulated minutes each. **At the four-seat table
+this family will actually sit, 83% of rounds hang permanently.** The bots
+convert 87% of the deals that are winnable at all, so they are not the weak
+link. Three seats is not merely worse — at 3.11% it does not work, and
+`minPlayers` is 3.
+
+**Nothing else hangs.** With every seat acting, 300 seeded deals at each of 3,
+4, 5 and 6 seats all reached a corner inside five simulated minutes. There is no
+separate bot-deadlock to guard against; the idle seat is the whole failure.
+
+Nothing in the rules module addresses this, and the local driver has no opinion
+about it either. `specs/session-2-bots-and-the-local-driver.md` §6 plays its
+end-to-end session with a human seat that takes the occasional trade, which is
+what a person does and is not a fix.
 
 The candidates, cheapest first:
 
@@ -238,6 +257,22 @@ The candidates, cheapest first:
 
 *Rec:* the third, decided when session 4 settles what happens to an abandoned
 session, because it is the same question asked twice.
+
+Two measurements decide between them. **Room-wide quiet does not scale with the
+table.** The longest gap between trades inside rounds that resolved normally is
+9s at five seats, 21.5s at four, and 41.5s at three, where rounds themselves run
+to 286s. A single *N* on room-wide quiet either redeals live three-seat rounds
+or takes minutes to fire at five, so the first two candidates need a threshold
+per seat count that the third does not: a seat's own idleness is one seat's
+behaviour and does not stretch with the table.
+
+**Hand-back is the cheap half.** `apply` already carries `now`, so a
+`lastActionAt` per seat and "any valid action reclaims the seat" is the whole
+rule. The expensive half is the threshold: a human thinking for forty seconds at
+a three-seat table is indistinguishable from an abandoned one, and in little-kid
+mode (§6) an idle seat is the normal state rather than the exception — a
+5-year-old will read the fill as the game taking their cards. *N* is a per-mode
+number, not a constant.
 
 ---
 
