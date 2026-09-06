@@ -56,3 +56,59 @@ cost is that R3 stops being one mechanism across all modes and becomes
 Start from B, not A. Prototype it once the race-mode sync layer exists; it needs
 no board-propagation sync at all, which is the expensive part of A. Test with
 the kids before committing either way.
+
+---
+
+## Technique-ceiling difficulty tiers — superseded 2026-09-06
+
+Difficulty was originally tiered by the hardest technique a puzzle required:
+tier 1 solvable by naked and hidden singles, tier 2 needing naked pairs, tier 3
+needing pointing pairs. `carve` reduced a solution to a minimal clue set and a
+binary search added clues back until a `rate` function said the set had reached
+the target tier. Two slices were spec'd around it — a solver-and-rating slice
+producing `rate`, proven monotone so the search was valid, and a tiering slice
+running the search under a retry budget.
+
+Replaced by clue count (`sudoku-design.md` §4.3): each tier names how many
+givens it deals and `carve` stops there.
+
+### Why
+
+Measured, at 9×9, over 40 deals per clue count — the fraction of carved boards
+solvable by naked and hidden singles alone:
+
+| Clues | 50 | 44 | 40 | 36 | 32 | 30 | 28 | 26 |
+|---|---|---|---|---|---|---|---|---|
+| Solvable by singles | 40/40 | 40/40 | 40/40 | 39/40 | 39/40 | 35/40 | 26/40 | 19/40 |
+
+Singles suffice down to about 32 clues. Naked pairs and pointing pairs only
+start deciding anything below 30, which is harder than the hardest tier this
+project deals — so all three technique tiers would have dealt the same kind of
+puzzle, distinguished by a label. The players are 11 and 12 and the youngest was
+already struggling with what the openness floor alone produced (~31 givens).
+
+Clue count also removed machinery rather than adding it: no `rate`, no
+monotonicity proof, no binary search, no retry budget, no honouring-the-label
+re-carve. Deals got 5–7× faster, because a carve that stops at 50 clues runs a
+fraction of the uniqueness checks a minimal carve does. And a tier became exact
+— Easy is 50 clues every time, where the search-based tiers varied deal to deal.
+
+### What was removed
+
+- `specs/slice-03-solver-and-rating.md`'s rating half: `rate`, `MAX_TIER`, the
+  monotonicity property and its test group. The solver survives as
+  `specs/slice-05-solver.md`, serving hints and the technique library only.
+- `specs/slice-04-difficulty-tiers.md` entirely, replaced by
+  `specs/slice-03-difficulty-tiers.md`.
+- `specs/slice-025-openness-floor.md`, whose openness floor folded into that
+  same slice — it is no longer a defect fix against minimal carves, because
+  nothing deals a minimal carve. The floor itself is unchanged and still
+  enforced on every deal; it just fires on fewer than one deal in ten now.
+
+### If this is reopened
+
+The technique functions in slice 5 are what a `rate` would be built from, and
+nothing about them was compromised to make this change — `solveLogically` still
+takes an `allowed` set. What would have to come back is monotonicity: it was
+never proven, because nothing came to need it. Reopen this only if the players
+outgrow a 32-clue 9×9, which is the good version of this problem.

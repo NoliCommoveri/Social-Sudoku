@@ -1,25 +1,22 @@
 // How much of the board a person can see at once.
 //
-// `carve` stops the moment one more removal would break uniqueness, and a
-// minimal clue set is the hardest thing a solution grid can produce: it is
-// often not solvable by singles at all, and when it is, it can run for dozens
-// of turns with one findable cell each. Uniqueness says nothing about that —
-// it is a property of the solution, not of the path to it.
+// A round is one sweep of the board: every cell findable right now by a naked
+// single (one candidate left) or a hidden single (a value with one home left in
+// some unit). A puzzle's openness floor is the fewest cells any round offers.
 //
-// Openness is the second axis. A round is one sweep of the board: every cell
-// findable right now by a naked single (one candidate left) or a hidden single
-// (a value with one home left in some unit). A puzzle's openness floor is the
-// fewest cells any round offers.
+// This is the floor of design 4.3, and it is a different question from how many
+// clues a puzzle starts with. Clue count says how much work there is; openness
+// says whether there is always something to find. A board can hold plenty of
+// clues and still close down into a single-file corridor — one findable cell,
+// then another, with nothing else on offer — and that is the shape that makes a
+// child stare at a grid for two minutes. `carve` sets the clue count and clears
+// this floor unaided nearly every time; `ease` exists for the deals where it
+// does not.
 //
 // The endgame is excluded. Once fewer cells remain than the round can fill,
 // the count falls purely because the puzzle is ending, and holding that against
 // it would mean no puzzle ever passes. So a round constrains the floor only
 // while it leaves work behind.
-//
-// This is not the technique rating of design 4.3, which is a ceiling on how
-// hard the hardest deduction is. Openness is a floor on how many deductions are
-// on offer. A puzzle can be singles-only and still be a single-file corridor;
-// that is exactly what a carved minimal puzzle usually is.
 
 import { popcount, lowestValue, seedCandidates } from './candidates.js';
 import { shuffled } from './rng.js';
@@ -112,14 +109,17 @@ export function measureOpenness(geom, givens) {
  *
  * Clues come from `solution` in one shuffled order, so the result is a superset
  * of `base` that agrees with `solution` everywhere — which is what keeps it
- * uniquely solvable without a second uniqueness check. That is the same
- * add-back shape design 4.3 tiers on, run here against openness instead of a
- * technique rating.
+ * uniquely solvable without a second uniqueness check.
+ *
+ * This runs on every deal and does nothing on most of them: at the clue counts
+ * `SIZES` asks for, a carved board already solves by singles with room to
+ * spare. Returning `base` untouched is the expected outcome, not a failure to
+ * do its job.
  *
  * Termination is guaranteed by the complete grid: it solves with no rounds at
  * all. Reaching it would mean returning a puzzle with nothing to do, so the
  * caller is expected to hold a floor that real boards meet well before then —
- * `SIZES[<size>].openness` does.
+ * every `SIZES[<size>].tiers[<tier>].openness` does.
  *
  * @param {object} geom
  * @param {Uint8Array} solution

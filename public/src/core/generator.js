@@ -2,8 +2,8 @@
 // over incrementally maintained candidate masks, with the value order shuffled
 // when an rng is supplied and left in index order when it is not.
 //
-// `deal` adds a fourth step, `ease`, which lives in openness.js: carving alone
-// produces a puzzle nobody in this family can solve.
+// `deal` adds a fourth step, `ease`, which lives in openness.js and guarantees
+// the openness floor on the rare carve that comes out closed.
 
 import { mulberry32, shuffled } from './rng.js';
 import { popcount, valuesIn, seedCandidates } from './candidates.js';
@@ -99,46 +99,65 @@ export function countSolutions(geom, values, cap = 2) {
 
 /**
  * Removes clues from a complete grid while the remainder stays uniquely
- * solvable. One pass in shuffled order, so the result is minimal with respect
- * to that order — not globally minimal, which nothing needs.
+ * solvable, stopping once `keep` clues are left. One pass in shuffled order.
+ *
+ * `keep` is the difficulty. A `keep` of 0 asks for everything removable to be
+ * removed, which gives a minimal clue set with respect to that order — the
+ * hardest puzzle this solution grid can make, and not what the app deals. Any
+ * higher `keep` is hit exactly: clues come off one at a time and the pass ends
+ * the moment the count reaches it.
+ *
+ * One pass suffices, and a second would find nothing. If removing a cell from
+ * this board breaks uniqueness it also breaks it on every board further along
+ * the pass, because those hold fewer clues and a subset never has fewer
+ * solutions. So a cell refused once is refused forever, and the only way the
+ * pass ends above `keep` is that the board went minimal first — which at every
+ * size here happens well below the clue counts `SIZES` asks for.
  *
  * @param {object} geom
  * @param {Uint8Array} solution
  * @param {() => number} rng
+ * @param {number} [keep] clues to stop at; 0 removes everything removable
  * @returns {Uint8Array}
  */
-export function carve(geom, solution, rng) {
+export function carve(geom, solution, rng, keep = 0) {
   const puzzle = Uint8Array.from(solution);
+  let clues = geom.cellCount;
   const cells = new Array(geom.cellCount);
   for (let cell = 0; cell < geom.cellCount; cell++) cells[cell] = cell;
   for (const cell of shuffled(rng, cells)) {
+    if (clues <= keep) break;
     const value = puzzle[cell];
     puzzle[cell] = 0;
     if (countSolutions(geom, puzzle, 2) !== 1) puzzle[cell] = value;
+    else clues--;
   }
   return puzzle;
 }
 
 /**
- * A whole puzzle from one seed. Deterministic: the same seed and size always
- * give the same givens and the same solution.
+ * A whole puzzle from one seed at one difficulty. Deterministic: the same seed,
+ * size and tier always give the same givens and the same solution.
  *
- * `carve` alone returns a minimal clue set, which is the hardest puzzle its
- * solution grid can make and routinely not solvable by singles at all. `ease`
- * then adds clues back until the board solves by singles with `geom.openness`
- * cells findable in every round — the players are children and this is meant to
- * be a low-stress game, so the dealt puzzle is the open one, not the minimal
- * one. The clue set is a superset of a uniquely solvable one and agrees with
- * `solution`, so it is still uniquely solvable.
+ * Difficulty is `tier.clues`, and `carve` delivers it exactly. `ease` then adds
+ * clues back only if the carve came out closed — a board singles cannot finish,
+ * or one with a round offering fewer than `tier.openness` cells. At the clue
+ * counts `SIZES` asks for that is rare, so the dealt clue count is the tier's
+ * clue count on almost every deal and a little above it otherwise. Erring
+ * upwards is erring easy, which is the right direction to err in.
+ *
+ * The clue set is a superset of a uniquely solvable one and agrees with
+ * `solution` everywhere, so it is uniquely solvable whatever `ease` added.
  *
  * @param {object} geom
  * @param {number} seed
+ * @param {{ clues: number, openness: number }} tier
  * @returns {{ seed: number, solution: Uint8Array, givens: Uint8Array }}
  */
-export function deal(geom, seed) {
+export function deal(geom, seed, tier) {
   const rng = mulberry32(seed);
   const solution = fillComplete(geom, rng);
-  const base = carve(geom, solution, rng);
-  const givens = ease(geom, solution, base, rng, geom.openness);
+  const base = carve(geom, solution, rng, tier.clues);
+  const givens = ease(geom, solution, base, rng, tier.openness);
   return { seed, solution, givens };
 }

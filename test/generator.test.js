@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SIZES } from '../public/src/core/sizes.js';
+import { SIZES, SIZE_KEYS, TIER_IDS, tierFor } from '../public/src/core/sizes.js';
 import { makeGeometry } from '../public/src/core/grid.js';
 import { mulberry32 } from '../public/src/core/rng.js';
 import { fillComplete, countSolutions, carve, deal } from '../public/src/core/generator.js';
@@ -90,7 +90,7 @@ test('carve output is uniquely solvable, and a subset of its solution', () => {
     for (let seed = 1; seed <= CARVE_SEEDS; seed++) {
       const rng = mulberry32(seed);
       const solution = fillComplete(geom, rng);
-      const givens = carve(geom, solution, rng);
+      const givens = carve(geom, solution, rng, 0);
       const where = `size ${size.n}, seed ${seed}`;
 
       assert.equal(countSolutions(geom, givens, 2), 1, `${where} is not unique`);
@@ -109,15 +109,93 @@ test('carve does not mutate the solution it was given', () => {
   const rng = mulberry32(42);
   const solution = fillComplete(geom, rng);
   const before = Array.from(solution);
-  carve(geom, solution, rng);
+  carve(geom, solution, rng, 0);
   assert.deepEqual(Array.from(solution), before);
 });
 
-test('deal is deterministic per seed', () => {
+// Difficulty is clue count, so `keep` is the whole of it and hitting it exactly
+// is what makes a label mean something. A carve that lands near the target
+// instead of on it is a tier that varies deal to deal, which is the thing this
+// replaced.
+test('carve stops at exactly the clue target it was given', () => {
+  for (const sizeKey of SIZE_KEYS) {
+    const geom = makeGeometry(SIZES[sizeKey]);
+    for (const tierId of TIER_IDS) {
+      const { clues: keep } = tierFor(sizeKey, tierId);
+      for (let seed = 1; seed <= 20; seed++) {
+        const rng = mulberry32(seed);
+        const solution = fillComplete(geom, rng);
+        const carved = carve(geom, solution, rng, keep);
+        const clues = carved.reduce((count, value) => count + (value === 0 ? 0 : 1), 0);
+        assert.equal(clues, keep, `size ${sizeKey} ${tierId}, seed ${seed}: ${clues} clues`);
+        assert.equal(countSolutions(geom, carved, 2), 1, `size ${sizeKey} ${tierId} not unique`);
+      }
+    }
+  }
+});
+
+// The floor under the previous test. Every tier target must sit above the point
+// where a board goes minimal, or `carve` would run out of removable clues and
+// return more than asked. If a future tier is set too low this fails here
+// rather than silently dealing an easier puzzle than its label.
+test('every tier target is reachable at its size', () => {
+  for (const sizeKey of SIZE_KEYS) {
+    const geom = makeGeometry(SIZES[sizeKey]);
+    const hardest = tierFor(sizeKey, TIER_IDS.at(-1)).clues;
+    for (let seed = 1; seed <= 20; seed++) {
+      const rng = mulberry32(seed);
+      const solution = fillComplete(geom, rng);
+      const minimal = carve(geom, solution, rng, 0);
+      const floor = minimal.reduce((count, value) => count + (value === 0 ? 0 : 1), 0);
+      assert.ok(
+        floor <= hardest,
+        `size ${sizeKey}, seed ${seed}: minimal is ${floor} clues, hardest tier asks ${hardest}`,
+      );
+    }
+  }
+});
+
+test('a harder tier never deals more clues than an easier one', () => {
+  for (const sizeKey of SIZE_KEYS) {
+    const geom = makeGeometry(SIZES[sizeKey]);
+    for (let seed = 1; seed <= 20; seed++) {
+      const counts = TIER_IDS.map((tierId) => {
+        const { givens } = deal(geom, seed, tierFor(sizeKey, tierId));
+        return givens.reduce((count, value) => count + (value === 0 ? 0 : 1), 0);
+      });
+      for (let i = 1; i < counts.length; i++) {
+        assert.ok(
+          counts[i] <= counts[i - 1],
+          `size ${sizeKey}, seed ${seed}: ${TIER_IDS[i]} dealt ${counts[i]} clues, `
+          + `${TIER_IDS[i - 1]} dealt ${counts[i - 1]}`,
+        );
+      }
+    }
+  }
+});
+
+test('deal is deterministic per seed and tier', () => {
   const geom = makeGeometry(SIZES[9]);
-  const first = deal(geom, 12345);
-  const again = deal(geom, 12345);
+  const tier = tierFor(9, 'medium');
+  const first = deal(geom, 12345, tier);
+  const again = deal(geom, 12345, tier);
   assert.deepEqual(Array.from(first.givens), Array.from(again.givens));
   assert.deepEqual(Array.from(first.solution), Array.from(again.solution));
   assert.equal(countSolutions(geom, first.givens, 2), 1);
+});
+
+// One solution grid per seed whatever the difficulty, which is what design 4.3
+// needs for two people to race the same deal at two tiers.
+test('every tier of one seed shares a solution grid', () => {
+  for (const sizeKey of SIZE_KEYS) {
+    const geom = makeGeometry(SIZES[sizeKey]);
+    for (let seed = 1; seed <= 10; seed++) {
+      const solutions = TIER_IDS.map(
+        (tierId) => Array.from(deal(geom, seed, tierFor(sizeKey, tierId)).solution),
+      );
+      for (const solution of solutions) {
+        assert.deepEqual(solution, solutions[0], `size ${sizeKey}, seed ${seed}`);
+      }
+    }
+  }
 });

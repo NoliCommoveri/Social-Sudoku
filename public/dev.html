@@ -41,13 +41,17 @@ the phone, not on a desktop — a fast machine says nothing about the target.</p
 <div id="timing">Not run.</div>
 
 <h2>Spot-check</h2>
-<p>One puzzle per size. 6&times;6 is the one to look at: its boxes are 3 wide and
-2 tall, so the heavy rules fall down the middle column and under rows 2 and 4.</p>
-<button type="button" id="sample">Deal one of each size</button>
+<p>One puzzle per size and difficulty. 6&times;6 is the one to look at for the
+heavy rules: its boxes are 3 wide and 2 tall, so they fall down the middle
+column and under rows 2 and 4. Read across a row to see difficulty as a person
+sees it &mdash; how much of the board is already filled in.</p>
+<button type="button" id="sample">Deal one of each size and difficulty</button>
 <div class="boards" id="boards"></div>
 
 <script type="module">
-import { SIZES, SIZE_KEYS, DEFAULT_SIZE_KEY } from './src/core/sizes.js';
+import {
+  SIZES, SIZE_KEYS, DEFAULT_SIZE_KEY, TIER_IDS, TIER_LABELS, tierFor,
+} from './src/core/sizes.js';
 import { makeGeometry } from './src/core/grid.js';
 import { deal, countSolutions } from './src/core/generator.js';
 import { createBoard } from './src/ui/board.js';
@@ -57,6 +61,11 @@ const TARGET_MS = 250;
 const HARD_FAIL_MS = 1000;
 
 const geom = makeGeometry(SIZES[DEFAULT_SIZE_KEY]);
+
+// The hardest tier is the slowest to deal: every clue removed costs a
+// uniqueness check, and the hard tier removes the most. Timing the easy tier
+// would flatter the budget.
+const SLOWEST_TIER = tierFor(DEFAULT_SIZE_KEY, TIER_IDS.at(-1));
 const timing = document.getElementById('timing');
 const boards = document.getElementById('boards');
 
@@ -69,7 +78,7 @@ document.getElementById('run').addEventListener('click', async () => {
   // on a phone looks like a crash.
   for (let i = 0; i < DEALS; i++) {
     const t0 = performance.now();
-    const dealt = deal(geom, (Date.now() ^ (i * 2654435761)) >>> 0);
+    const dealt = deal(geom, (Date.now() ^ (i * 2654435761)) >>> 0, SLOWEST_TIER);
     times.push(performance.now() - t0);
     if (countSolutions(geom, dealt.givens, 2) === 1) unique++;
     if (i % 10 === 9) {
@@ -95,27 +104,30 @@ document.getElementById('sample').addEventListener('click', () => {
   for (const sizeKey of SIZE_KEYS) {
     const size = SIZES[sizeKey];
     const sizeGeom = makeGeometry(size);
-    const seed = (Math.random() * 0x100000000) >>> 0;
-    const dealt = deal(sizeGeom, seed);
-    const clues = dealt.givens.reduce((count, value) => count + (value === 0 ? 0 : 1), 0);
+    for (const tierId of TIER_IDS) {
+      const seed = (Math.random() * 0x100000000) >>> 0;
+      const dealt = deal(sizeGeom, seed, tierFor(sizeKey, tierId));
+      const clues = dealt.givens.reduce((count, value) => count + (value === 0 ? 0 : 1), 0);
 
-    const figure = document.createElement('figure');
-    figure.className = 'sample';
-    figure.style.margin = '0';
-    const root = document.createElement('div');
-    figure.append(root);
-    const caption = document.createElement('figcaption');
-    caption.textContent =
-      `${size.n}×${size.n}, boxes ${size.boxW}×${size.boxH} — seed ${seed}, ${clues} clues`;
-    figure.append(caption);
-    boards.append(figure);
+      const figure = document.createElement('figure');
+      figure.className = 'sample';
+      figure.style.margin = '0';
+      const root = document.createElement('div');
+      figure.append(root);
+      const caption = document.createElement('figcaption');
+      caption.textContent =
+        `${size.n}×${size.n} ${TIER_LABELS[tierId]} — ${clues} clues, `
+        + `${sizeGeom.cellCount - clues} to fill (seed ${seed})`;
+      figure.append(caption);
+      boards.append(figure);
 
-    createBoard({ root, geom: sizeGeom, onSelect: () => {}, onSet: () => {} }).render({
-      values: dealt.givens,
-      givens: dealt.givens,
-      marks: new Set(),
-      selected: null,
-    });
+      createBoard({ root, geom: sizeGeom, onSelect: () => {}, onSet: () => {} }).render({
+        values: dealt.givens,
+        givens: dealt.givens,
+        marks: new Set(),
+        selected: null,
+      });
+    }
   }
 });
 </script>
