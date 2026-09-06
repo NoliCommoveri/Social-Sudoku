@@ -1,7 +1,9 @@
 # Trading Game ("Pit-style") — Design Spec
 
-**Status:** design stage, no code. Phase 6 of `../../ROADMAP.md`. First consumer
-of the generic `GameRoom` interface (`../gameroom.md`) at `games.immotus.app`.
+**Status:** design stage, no code. Phase 5 of `../../ROADMAP.md`, built and
+played on one device against bots. `GameRoom` (`../gameroom.md`) is Phase 6 and
+takes this rules module unchanged in Phase 7, when Pit becomes the interface's
+first consumer at `games.immotus.app`.
 
 **How to read this document.** Items marked **Decided** came from the user. Items marked **Recommendation** are proposals from design discussion — they have named alternatives and a revisit trigger, and a future session should treat them as open unless the user has since confirmed them. Nothing here is irreversible.
 
@@ -10,7 +12,7 @@ of the generic `GameRoom` interface (`../gameroom.md`) at `games.immotus.app`.
 ## 0. Context
 
 - Target players: user, husband, two kids (11 and 12). Bots fill remaining seats.
-- Deployed under `games.immotus.app` as one game module inside a shared hub Worker (single `GameRoom` Durable Object class, rules supplied per-game). Stack in `../architecture.md`.
+- Served under `games.immotus.app` as one game module inside the hub Worker. Rules, bots and client are static files under `public/pit/` and need no server; multiplayer later adds the shared `GameRoom` Durable Object class with rules supplied per-game. Stack in `../architecture.md`.
 - A separate simplified version for a 4- and 5-year-old is planned **last**, as its own mode. Notes in §7.
 - The horse breeding game is **not** part of this hub. It stays on its own subdomain.
 - IP: game mechanics are not copyrightable. Do not use the Parker Brothers name, its commodity set as a set, its card art, or the "Corner the Market" / Bull & Bear card naming and trade dress. The theme is original — the Fruit of the Spirit, §2.1 — so nothing here touches that set.
@@ -94,6 +96,9 @@ Four seats = four commodities = 36 cards, 9 dealt to each player. Nine
 commodities exist so that *C* can reach the largest table this family will ever
 sit; at a normal table most of the set is out of play.
 
+Bots hold seats, so the bot count asked at room setup (§3) is also the deck
+size. That one screen decides how many commodities are in play.
+
 **Decided — the *C* in play are drawn at random per session**, not taken in
 verse order. Two things follow, and both are the point:
 
@@ -171,17 +176,28 @@ Why this over continuous shouting: a faithful open-outcry version over mobile We
 
 ### 2.4 Corner detection
 
-**Recommendation: manual ring, with a visible prompt.** When a player reaches 9 of a kind, a ring button lights up. They must press it. It preserves the tension of the physical game and the real possibility of missing your own win while you're mid-trade.
+**Decided: a manual Harvest button, with `autoCorner` as a room config toggle.**
+Reaching 9 of a kind lights the button; the player has to press it. Missing your
+own win while you are mid-trade is the tension the physical game has, and it
+survives the translation.
 
-*Alternative:* auto-detect and end the round instantly. Removes a failure mode that a younger player will hit repeatedly and find frustrating rather than funny.
+The toggle exists because the failure mode lands on the players rather than on
+the design: an 11-year-old who misses two corners running finds it funny or
+finds it maddening, and which one cannot be settled here. With `autoCorner` set,
+the tick harvests for whoever qualifies. It is a room setting, not a build-time
+choice — `specs/session-1-rules-core.md` §6 puts it in `Config`.
 
-**Revisit based on:** how the 11-year-old reacts the first time they miss a corner. This is a genuine coin flip and should be a room config toggle rather than a build-time choice.
-
-**Recommendation — the button says "Harvest!"** The classic name is off the table for the reason in §0, and cornering a market in Love is an odd sentence besides. Every card in §2.1 is fruit on the branch, so filling a basket is the frame the art already sets. *Alternative:* "Full Basket!", which is what the little ones will say anyway. *Revisit if:* the word does not survive first contact with the kids.
+**The button says "Harvest!"** The classic name is off the table for the reason
+in §0, and cornering a market in Love is an odd sentence besides. Every card in
+§2.1 is fruit on the branch, so filling a basket is the frame the art already
+sets. *Alternative:* "Full Basket!", which is what the little ones will say
+anyway. *Revisit if:* the word does not survive first contact with the kids.
 
 ### 2.5 Scoring
 
-A corner scores the commodity's point value, which §2.1 assigns by rank within the set drawn for the session. Play to a target (500 is a reasonable default; make it configurable, since a family session length varies).
+A corner scores the commodity's point value, which §2.1 assigns by rank within
+the set drawn for the session. **Decided: a session ends at 300 points**, set at
+room setup. That is five or six rounds, which is one sitting.
 
 **Not in v1 — deferred, not rejected:**
 - Wild card (classic "Bull") — allows a corner with 8 + wild, at reduced value
@@ -195,6 +211,12 @@ These add real depth but they also add a second information channel and a lot of
 ## 3. Bots
 
 Required — the game is thin at four and the kids won't always all be available.
+They are also how Pit is playable at all before a room exists: sessions 1-4
+(`specs/README.md`) build the game against bots on one device.
+
+**Decided: how many bots sit down is asked at room setup, every time.** Not a
+default, and not a rule about filling short seats — whoever opens the room says.
+Since *C* = seats, that answer picks the deck too (§2.1).
 
 ### 3.1 Decision logic
 
@@ -237,39 +259,32 @@ Commodity identity is carried by the fruit and by the tint behind it, per the
 avatar rule in `../design-language.md` §2 — the name is a caption, never the
 channel. That is what the exclusion pairs in §2.1 protect.
 
-**The base-path warning that was here does not apply.** There is no bundler —
+**There is no base path to configure.** There is no bundler —
 `public/pit/` is plain ES modules with relative paths and serves at `/pit/`
 because that is where the files are. See `../architecture.md` §2.1.
 
 ---
 
-## 5. Open questions for the user
+## 5. Build order
 
-1. Manual ring or auto-corner (§2.4)?
-2. Target score, and roughly how long a session should run?
-3. Should bots be present by default, or only when seats are short?
-4. ~~Which theme?~~ Settled: the Fruit of the Spirit, nine commodities drawn
-   *C* at a time with values by rank. §2.1.
-5. ~~Cross-game standings at the hub now, or leave identity stubbed for v1?~~
-   Settled: identity and standings land in Phases 2–3, well before Pit. Pit
-   reads them rather than stubbing anything. See `../identity-and-stats.md`.
+The game on one device first, the room after. Four sessions, with a table, a
+cost per session and the driver contract that keeps the local driver and the
+room interchangeable, are in [`specs/README.md`](specs/README.md):
 
----
+1. Rules core — the whole game as pure functions.
+2. Bots and the local driver.
+3. The table.
+4. Round end, the session, the record.
 
-## 6. Build order (recommendation)
+That leaves a Pit one person plays against bots in a tab. `GameRoom`
+(`../gameroom.md`) follows, then the same client on a socket to it, then
+little-kid mode (§6).
 
-1. `GameRoom` DO — join, seats, sockets, reconnect, tick, per-player views. No game.
-2. Pit rules module, hot-seat testable, no bots.
-3. Client, offer board, ring.
-4. Bots.
-5. Scoring, multi-round, standings.
-6. Little-kid mode (§7).
-
-Each step should be playable before the next starts.
+Each step is playable before the next starts.
 
 ---
 
-## 7. Little-kid mode (ages 4 and 5) — deferred
+## 6. Little-kid mode (ages 4 and 5) — deferred
 
 Not a difficulty slider. Separate mode, same room infrastructure.
 

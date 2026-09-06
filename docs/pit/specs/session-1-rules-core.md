@@ -33,7 +33,7 @@ when there are two copies and a reason.
 ## 2. Commodities
 
 `commodities.js` is the only module in Pit that contains the number 9, the
-number 4, or a point value. `../design.md` §7's little-kid mode changes all
+number 4, or a point value. `../design.md` §6's little-kid mode changes all
 three, and it changes them here.
 
 ```js

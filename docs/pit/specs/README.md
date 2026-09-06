@@ -1,6 +1,6 @@
 # Pit session specs
 
-Implementation specs for the build order in [`../design.md`](../design.md) §6.
+Implementation specs for the build order in [`../design.md`](../design.md) §5.
 One file per session. A session is spec'd only when it is next or nearly next;
 the rest live only as a row in the table below.
 
@@ -17,12 +17,10 @@ then Pit on it — and is not spec'd here until the room exists.
 
 ## Why the game before the room
 
-The roadmap used to build `GameRoom` first and Pit on top of it. It does not
-any more, and the reason is that **only multiplayer needs the Durable Object.**
-The rules module is pure. The bots are a pure function of a view. The client
-renders a view and sends actions. All three run in a browser tab with no server
-in the picture, and the family can play the game while the room is still
-unwritten.
+**Only multiplayer needs the Durable Object.** The rules module is pure. The
+bots are a pure function of a view. The client renders a view and sends actions.
+All three run in a browser tab with no server in the picture, and the family can
+play the game while the room is still unwritten.
 
 What that buys, stated as the things it avoids:
 
@@ -88,7 +86,7 @@ From `CLAUDE.md`, not from taste.
 The size-literal ban in `CLAUDE.md` is sudoku's and does not apply here. Pit has
 its own version of the same idea and it is narrower: **9, 4 and the point values
 are named in `core/commodities.js` and nowhere else**, because the little-kid
-mode in `../design.md` §7 changes all three.
+mode in `../design.md` §6 changes all three.
 
 ## Device checks
 
