@@ -7,7 +7,7 @@ the rest live only as a row in the table below.
 | # | Session | Spec | Cost | State |
 |---|---|---|---|---|
 | 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | ✅ Built |
-| 2 | Bots and the local driver | — | Medium | Next, not spec'd |
+| 2 | Bots and the local driver | [`session-2-bots-and-the-local-driver.md`](session-2-bots-and-the-local-driver.md) | Medium | Next |
 | 3 | The table | — | Medium–Large | Not spec'd |
 | 4 | Round end, the session, the record | — | Medium | Not spec'd |
 
@@ -55,6 +55,12 @@ onEvent(event => …)         // public events only, for animation and sound
 onRefusal(({ action, reason }) => …)
 leave()
 ```
+
+Bots are not in it. They are gated and driven inside the rules module's `tick`,
+because the gate lives in `State` and `State` is opaque to whatever carries it —
+`session-2-bots-and-the-local-driver.md` §2 has the argument. A driver
+therefore has nothing bot-shaped in it, and the two drivers cannot diverge over
+bot timing.
 
 Two rules that make the swap possible rather than merely intended:
 
