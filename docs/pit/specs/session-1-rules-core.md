@@ -22,6 +22,7 @@ public/pit/core/rules.js         init, validate, apply, view, tick, isComplete
 test/pit-commodities.test.js     the draw and the values
 test/pit-rules.test.js           deals, trades, corners, scoring
 test/pit-view.test.js            the confidentiality boundary
+test/pit-core-purity.test.js     §9's criteria 5 and 6, as greps
 ```
 
 `rng.js` is eight lines copied from `public/sudoku/core/rng.js` rather than a
@@ -54,8 +55,10 @@ drift.
 drawCommodities(rng, seats) -> string[]   // length `seats`, in value order
 ```
 
-*C* = seats. The set is drawn at random per session, so every card gets used and
-no fruit is permanently the valuable one.
+*C* = seats, and the table runs from three seats to nine: below three a blind
+swap is an exchange with the only other person holding cards, and above nine
+there is no commodity left to deal. The set is drawn at random per session, so
+every card gets used and no fruit is permanently the valuable one.
 
 **Exclusions.** The three lookalike pairs in `../design.md` §2.1 —
 goodness/gentleness, goodness/joy, love/kindness — never deal together. Draw by
@@ -63,12 +66,15 @@ shuffling the nine and taking greedily, skipping any key that conflicts with one
 already taken; if a pass cannot reach *C*, reshuffle and try again, bounded at
 some small number of attempts.
 
-Above seven seats the constraint is unsatisfiable and is dropped: goodness
-excludes both other berries and love excludes kindness, so the largest conflict-
-free set is seven. Eight and nine seats take the shuffle as it comes. The bound
-on attempts is a belt-and-braces guard, not the mechanism — a greedy pass from a
-uniform shuffle reaches seven often enough that the loop is not a performance
-question at any table this family sits.
+Above the largest conflict-free set the constraint is unsatisfiable and is
+dropped. That size is found by inspecting the pairs at module load rather than
+written down, so editing the exclusions cannot leave a stale number behind; with
+the three pairs above it is seven, because goodness excludes both other berries
+and love excludes kindness. Eight and nine seats take the shuffle as it comes,
+and so does a draw that exhausts its attempts — dealing a lookalike pair beats
+failing to deal a game. The bound on attempts is a belt-and-braces guard, not
+the mechanism: a greedy pass from a uniform shuffle reaches seven often enough
+that the loop is not a performance question at any table this family sits.
 
 **Values.** Once the set is drawn, shuffle it again and assign `BASE_VALUE`,
 `+VALUE_STEP` and so on. The returned array is in that order, cheapest first, so
@@ -97,11 +103,13 @@ interface State {
   phase: 'trading' | 'roundEnd' | 'over';
   hands: { [playerId: string]: Hand };
   offers: Offer[];
+  offerSeq: number;          // this round's offer counter, for Offer.id
   scores: { [playerId: string]: number };
   history: PublicEvent[];    // counts only, never a commodity
   botsReadyAt: { [playerId: string]: number };
   harvest?: { playerId: string, commodity: Commodity, value: number };
   ready: string[];           // who has pressed through the round-end reveal
+  roundEndsAt: number;       // when tick ends the reveal regardless
 }
 
 interface Offer {
@@ -187,6 +195,12 @@ never ran.
 Pit that a bug in is fatal to the game. It is also what bots see, so a bot
 cannot cheat by construction rather than by intent.
 
+**It is built, not filtered.** A view is assembled out of public counts plus one
+player's own hand; there is no copy of state with the private fields deleted. A
+field added to `State` in a later session therefore cannot leak by being
+forgotten about here, which is the failure mode a filter has and a constructor
+does not.
+
 ```ts
 interface View {
   round, phase, target, values, commodities,
@@ -194,8 +208,9 @@ interface View {
     playerId, hand: Hand,
     offer?: { id, count, commodity },   // your own, so the commodity is yours to see
     canHarvest: boolean,
+    ready: boolean,
   },
-  seats: [{ playerId, name, isBot, cards: number, score: number }],
+  seats: [{ playerId, name, isBot, cards: number, score: number, ready: boolean }],
   offers: [{ id, playerId, count, expiresAt, mine: boolean, matchable: boolean }],
   history: PublicEvent[],
   harvest?: { playerId, commodity, value },
@@ -208,6 +223,10 @@ visible in a hand at a table and because a player who has offered three cards
 away is visibly holding six. `matchable` is whether the viewer holds `count` of
 some single commodity, which is the greying rule in `../design.md` §4 computed
 once on the server side of the boundary rather than three times in the client.
+
+`ready` is public on both sides of the boundary: who has pressed through the
+reveal is a fact about a person, not about a hand, and the round-end screen has
+to draw it.
 
 `reveal` is absent during `trading` and complete afterwards. The round-end
 reveal is where the count history retroactively becomes readable, and it is a
