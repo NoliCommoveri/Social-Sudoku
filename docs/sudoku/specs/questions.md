@@ -96,9 +96,9 @@ the only measurement in this project that a test cannot take.
 
 Phase 2 Session A's behaviour lives entirely in a Worker talking to D1, and
 there is no `wrangler dev` here — the loop is push, wait for the build, open the
-page. None of this can be closed by CI or by me. **A2 comes first**: without a
-real database id in `wrangler.jsonc` the deploy fails and nothing below is
-reachable.
+page. None of this can be closed by CI or by me. **A2** is done — the `gameroom`
+database exists and its id is in `wrangler.jsonc` — so everything below is
+reachable as soon as this is on `main` and Cloudflare has built it.
 
 Any browser, either device. In this order — each step is the setup for the next.
 

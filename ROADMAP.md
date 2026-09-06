@@ -78,7 +78,8 @@ checksums, applied/pending/drifted — and is the only part CI can reach, becaus
 module that imports SQL and holds no logic. `001_schema.sql` carries `players`,
 `plays` and `play_results`; `seed_players.sql` carries placeholders. The admin
 page renders before login and before any table exists, and puts the failing
-statement and its error on the page. Blocked on **A2**.
+statement and its error on the page. **A2** is done; the database is empty until
+**S6** applies the schema from `/admin`.
 
 **Session B — erase, export, re-import.** Small–Medium, ~30k. The third button,
 JSON export wired into the erase confirmation itself, and re-import. Separable

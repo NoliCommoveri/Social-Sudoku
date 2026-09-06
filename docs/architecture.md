@@ -250,10 +250,9 @@ Dashboard actions, in order. None has a CLI step.
   nothing. After A2–A4 it would hold the D1 binding, the Durable Object
   namespace and the domain, none of which follow to the new Worker.
 
-- **A2 — Create the D1 database.** D1 → Create → `gameroom`. Paste the id into
-  `wrangler.jsonc`, replacing `PASTE_D1_DATABASE_ID_HERE`. *Phase 2.* **Until
-  this is a real id the deploy fails and the site does not update**, so do it
-  before merging the branch that adds the binding. Then open `/admin` — S6.
+- **A2 — Create the D1 database ✅ done.** `gameroom`, its id in
+  `wrangler.jsonc`. The database exists and is empty; **S6** is applying the
+  schema to it from `/admin`, which happens after this branch is on `main`.
 - **A3 — Set two secrets.** Worker → Settings → Variables and Secrets →
   Encrypted. `FAMILY_PASSPHRASE` and `SESSION_SECRET` (any long random string).
   *Phase 2.*

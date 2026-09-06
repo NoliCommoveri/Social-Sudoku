@@ -12,10 +12,10 @@
     {
       "binding": "DB",
       "database_name": "gameroom",
-      // Setup task A2 (docs/architecture.md §8): D1 -> Create -> gameroom, then
-      // paste its id here in the GitHub web editor. The deploy fails until this
-      // is a real id, and the failure is in the Cloudflare build log.
-      "database_id": "PASTE_D1_DATABASE_ID_HERE"
+      // The database created by setup task A2 (docs/architecture.md §8). The id
+      // is not a secret -- it names a database that only this Worker's binding
+      // can reach.
+      "database_id": "92d91667-4421-437c-a829-a37e5372e2d7"
     }
   ],
 
