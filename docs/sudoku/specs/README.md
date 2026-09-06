@@ -1,6 +1,6 @@
 # Slice specs
 
-Implementation specs for the slice order in `sudoku-design.md` §6. One file per
+Implementation specs for the slice order in `../design.md` §6. One file per
 slice. A slice is spec'd only when it is next or nearly next; unspec'd slices
 live only as the one-line entry in §6.
 
@@ -12,11 +12,18 @@ live only as the one-line entry in §6.
 | 4 | Pencil marks | Small | Not spec'd |
 | 5 | [`slice-05-solver.md`](slice-05-solver.md) | Small–Medium | Spec'd, not started |
 | 6 | [`slice-06-technique-library-hints.md`](slice-06-technique-library-hints.md) | Medium | Spec'd, not started |
-| 7 | [`slice-07-storage-foundation.md`](slice-07-storage-foundation.md) | Medium | Spec'd, not started |
-| 8 | Erase, JSON export, re-import | — | Not spec'd |
-| 9 | Timer + stats + best times | — | Not spec'd |
-| 10 | WebSocket sync + race mode | — | Not spec'd |
-| 11 | PWA | — | Not spec'd |
+| 7 | [`slice-07-storage-foundation.md`](slice-07-storage-foundation.md) | Medium | **Superseded** — rewritten for D1 as hub Phase 2 |
+| 8 | Erase, JSON export, re-import | — | Absorbed into hub Phase 2 |
+| 9 | Timer + stats + best times | — | Became hub Phase 3 |
+| 10 | WebSocket sync + race mode | — | Became hub Phase 8 |
+| 11 | PWA | — | Became hub Phase 10 |
+
+**Slices 4, 5 and 6 are unaffected by the hub pivot** and are current as
+written — all three are pure client work with no server in them, and they are
+hub Phase 4. Slices 7 onward were written against a per-family Durable Object
+that no longer owns the data; `../../../ROADMAP.md` has what replaced each, and
+`slice-07`'s migrations-and-admin machinery carries over almost whole into
+Phase 2 even though its architecture does not.
 
 No slice is estimated above Medium. `CLAUDE.md` caps a session at ~120k tokens
 and says a Large slice should be split rather than started; a spec that comes out
@@ -24,11 +31,10 @@ Large is a spec that has not been cut yet. Three pairs in this table are halves
 of slices that were: 3 and 4, 5 and 6, and 7 and 8. The reason for each cut is in
 the first section of the earlier file of the pair.
 
-Slice 7 is the first slice with a server in it and the first that writes a row.
 Everything `CLAUDE.md` says about migrations, seeds, the admin page, drift,
-erase, and JSON export belongs to slices 7 and 8 together, and slice 9 is the
-first slice that depends on either. Nothing before slice 7 stores anything a
-player would miss (`questions.md` Q7).
+erase, and JSON export now belongs to hub Phase 2. Nothing sudoku has built so
+far stores anything a player would miss (`questions.md` Q7), which is why that
+phase arrives with no data migration to perform.
 
 All open items live in [`questions.md`](questions.md): `S`* (a setup task only
 you can do, in a browser), `D`* (a due out — needs information I do not have),
@@ -40,11 +46,13 @@ slice 7 seeds. It does not block that slice.
 **Anything a slice cannot verify on its own is an `S`* item, not a line in that
 slice's acceptance criteria.** Timing on the phone, a touch layout, a
 keyboard-only run, a deployed URL — none of those can be closed by CI or by me,
-and a criterion nobody owns is a criterion that gets assumed. S1 connects the
-repo to Cloudflare; S2 is slice 1's four device checks; S4 is slice 2's two; S5
-is slice 3's, and it is the one that decides whether the easy tier is easy
-enough. Slice 6's library legibility on the phone and slice 7's six deployment
-checks each need the same treatment when that slice starts.
+and a criterion nobody owns is a criterion that gets assumed. S1 connected the
+repo to Cloudflare and is done; S2 is slice 1's four device checks; S4 is slice
+2's two; S5 is slice 3's, and it is the one that decides whether the easy tier
+is easy enough. **S2, S4 and S5 are all still open**, and the restructure does
+not touch the board, so they carry forward unchanged. Slice 6's library
+legibility on the phone needs the same treatment when it starts, and the hub's
+own checks are in `../../design-language.md` §5.
 
 ## Conventions these specs assume
 
@@ -70,7 +78,8 @@ from taste, so changing one is a project-level decision, not a slice-level one.
   deliberate edit. `2` is not banned; it is unusable as a signal.
   `slice-01-grid-generator-solo.md` §6 has the rule in full.
 - **Everything served lives under `public/`.** That directory is the Worker's
-  assets directory; the repo's docs and tests are not published.
+  assets directory; the repo's docs and tests are not published. From hub Phase
+  1, sudoku's share of it is `public/sudoku/` (`../../restructure.md`).
 - **Chrome only, current.** The players are on Android phones and a Chromebook.
   ES modules, CSS grid, container queries, `:has()`, and CSS nesting are used
   without fallbacks. The 360px-wide phone in portrait is the binding layout

@@ -1,6 +1,6 @@
 # Slice 6 — Technique library and hints
 
-Corresponds to `sudoku-design.md` §6 step 6, implementing §4.7 and the hint
+Corresponds to `../design.md` §6 step 6, implementing §4.7 and the hint
 button. The last slice with no server in it.
 
 **Estimated cost:** Medium (20–60k). Most of it is content and CSS; the only
@@ -10,7 +10,7 @@ logic is the reveal state machine and one precondition check.
 fixtures this renders are built. Slice 4 too, in practice: a hint that names a
 naked pair is hard to act on without pencil marks to have been reasoning in.
 
-**Closes `sudoku-design.md` §7.3.** The "what technique applies here?" bridge is
+**Closes `../design.md` §7.3.** The "what technique applies here?" bridge is
 this slice's level-1 reveal (§5). It is listed there as an optional later
 addition; it is free once the hint holds a `Step`, so there is nothing left for
 a later slice to add.
@@ -26,7 +26,7 @@ picker's technique names link into the library, so the words on the button and
 the words on the page are the same words.
 
 Still no timing, no stats, no server. This is the last slice that ships without
-one, and `sudoku-design.md` §6 is arranged so that stopping here leaves
+one, and `../design.md` §6 is arranged so that stopping here leaves
 something the kids use.
 
 ## 2. Files
@@ -129,7 +129,7 @@ that state is a beginner's, forty moves in, which is the board most likely to
 have the hint pressed on it.
 
 Comparing against `solution` is exact, costs one pass, and is available only
-because generation is client-side (`sudoku-design.md` §2) — the solution is
+because generation is client-side (`../design.md` §2) — the solution is
 already in memory, which is what slice 1's Check button reads. A
 server-authoritative variant would have to fall back to contradiction detection,
 which is weaker: it catches a cell with no candidates and misses a wrong digit

@@ -4,6 +4,13 @@ Status: design sketch. Everything below marked **Rec** is a recommendation with 
 
 ---
 
+**Sudoku inside the Carson Family Gameroom.** This document covers the game:
+puzzles, difficulty, modes, and the technique library. Everything shared with
+the other games — the Cloudflare stack, identity, the play record, the
+multiplayer room — lives in `../architecture.md`, `../identity-and-stats.md`
+and `../gameroom.md`. Phase ordering for the whole site is `../../ROADMAP.md`;
+§6 below is the sudoku-only slice order that feeds it.
+
 ## 1. Requirements
 
 | # | Requirement | Notes |
@@ -19,27 +26,33 @@ Status: design sketch. Everything below marked **Rec** is a recommendation with 
 
 ## 2. Architecture
 
-One deployment: a Worker that serves the static app from its assets directory and routes WebSocket upgrades to the Durable Object.
-
-Deployment is Cloudflare's GitHub integration. A push to `main` starts a Cloudflare build container which runs `wrangler deploy` and publishes to `social-sudoko.<subdomain>.workers.dev`. Nobody types that command — the build machine does, which is what keeps this inside the no-CLI rule. There is no build step: the app is plain ES modules served as-is. Configuration is `wrangler.jsonc` in the repo root.
+Sudoku is one game module inside the hub Worker. It serves from `public/`, and
+its multiplayer modes route WebSocket upgrades to the shared `GameRoom` Durable
+Object. The stack as a whole is `../architecture.md`.
 
 ```
-Browser (SPA)
+Browser (SPA at /sudoku/)
   │  HTTP (static assets, puzzle gen is client-side)
-  │  WebSocket (game session)
+  │  POST /api/plays on completion
+  │  WebSocket (race mode only)
   ▼
-Worker  ──routes──►  FamilyRoom Durable Object  (one per family code)
-                       ├── live session state (in memory + SQLite)
-                       └── stats history (SQLite)
+Worker  ──┬── D1        players, plays, play_results
+          └── GameRoom DO   live race state, one per room code
 ```
 
-**Rec: one DO per family code, not per game.** The family DO owns both the active session and the historical stats. Keeps everything in one consistency domain and avoids a separate database.
+**Solo and technique modes never touch the room.** No socket, no Durable
+Object — a static page plus one write on completion. Routing them through
+`GameRoom` for consistency would be slower and more fragile than the file it
+replaced.
 
-*Alternative:* DO per game session + D1 for stats. *Would revisit if:* you ever want cross-family leaderboards, or stats queries that span families.
+**Rec: puzzle generation runs client-side.** Keeps Worker and DO CPU near zero.
+*Alternative:* generate in the Worker. *Would revisit if:* you want
+server-authoritative anti-cheat — and note that for race mode the relevant
+decision is not where generation runs but whether the seed is sent to the
+client, since a seed determines the solution. `../architecture.md` §7.
 
-**Rec: puzzle generation runs client-side**, and the generated puzzle is uploaded to the DO when a session starts. Keeps DO CPU near zero.
-
-*Alternative:* generate in the Worker. *Would revisit if:* you want server-authoritative anti-cheat, which for a family game is probably not worth it.
+**Results live in D1, not in the Durable Object.** The room writes on
+completion; the rules module never writes. Schema in `../architecture.md` §3.1.
 
 ### 2.1 DO constraints that shape the code
 
@@ -132,12 +145,14 @@ Per-player board state is separate, which is what lets players race the same puz
 
 ### 4.6 Stats store
 
-DO SQLite. Two tables is enough:
+D1 at the hub, shared with every other game: `plays` and `play_results`
+(`../architecture.md` §3.1). Sudoku writes one `plays` row per board finished
+and one `play_results` row per player, with `unit` of `'seconds'`.
 
-- `results(player, mode, gridSize, tier, won, durationMs, completedAt)`
-- `bests(player, gridSize, tier, durationMs)` — derived, or just query `results`
-
-R4 and R5 are both reads off this. Include JSON export from day one.
+R4 and R5 are both reads off that. Best times are a query, not a table —
+`MIN(value)` grouped by size and tier — so there is nothing to keep in sync.
+Per-player identity, and why renaming a player never orphans their times, is in
+`../identity-and-stats.md`.
 
 ### 4.7 Technique library
 

@@ -1,6 +1,6 @@
 # Slice 7 — Storage foundation: the Durable Object, the schema, the admin page
 
-Corresponds to `sudoku-design.md` §6 step 7. The first slice with a server in
+Corresponds to `../design.md` §6 step 7. The first slice with a server in
 it, and the first that writes a row.
 
 **Estimated cost:** Medium (20–60k). The code is small; the cost is that none of
@@ -19,7 +19,7 @@ the mechanism demonstrating itself.
 
 `CLAUDE.md` specifies one storage surface: two lists with opposite rules, three
 buttons, a status table, drift, a quote-aware splitter, per-DO erase, and JSON
-export and re-import. That is Large in one session, and `specs/README.md`'s rule
+export and re-import. That is Large in one session, and `README.md`'s rule
 is that a spec which comes out Large has not been cut yet.
 
 - **This slice.** The DO exists. `MIGRATIONS` and `SEEDS` exist. **Apply
@@ -36,7 +36,7 @@ available cut is in front of them.
 `001_schema.sql` after it has applied shows as drift, and drift is never
 reapplied, so without erase there is no rebuild. The escape hatch is the
 architecture rather than a workaround: there is one DO per family code
-(`sudoku-design.md` §2), so a code that has never been used is a database with
+(`../design.md` §2), so a code that has never been used is a database with
 no tables. During this slice the schema is changed by editing the file and
 opening the admin page against a new code.
 
@@ -53,7 +53,7 @@ bent by it:
 
 - **No CLI** is about who types the command. Cloudflare's build container runs
   `npx wrangler deploy` on a push to `main` (S1); nobody here runs anything.
-- **No build step** (`specs/README.md`) is about `public/`. Client source stays
+- **No build step** (`README.md`) is about `public/`. Client source stays
   plain ES modules the browser loads directly, and this slice does not add a
   line to it. The Worker script is a different program that happens to share a
   repo, and it is never served.
@@ -125,7 +125,7 @@ Two things here are easy to get wrong and expensive afterwards.
   keep them apart in conversation as well as in code.
 - `new_sqlite_classes`, not `new_classes`. A DO created key-value backed cannot
   be converted to SQLite afterwards, the free plan offers SQLite-backed DOs only
-  (`sudoku-design.md` §2.1), and the fix for getting it wrong is a new class
+  (`../design.md` §2.1), and the fix for getting it wrong is a new class
   name rather than an edit.
 
 ## 4. Routing
@@ -143,7 +143,7 @@ Two things here are easy to get wrong and expensive afterwards.
 - Admin is `GET /r/<code>/admin`, posting to `/r/<code>/admin/apply` and
   `/r/<code>/admin/seed`.
 
-**No login.** There is none in this project (`sudoku-design.md` §7.1), and this
+**No login.** There is none in this project (`../design.md` §7.1), and this
 would be the only authenticated surface in the codebase if there were. Anyone
 with the admin URL can apply and seed, and from slice 8 can erase. §7.1 already
 accepts that anyone with the code is in; what makes erase survivable is slice
@@ -223,7 +223,7 @@ member, with placeholder names until **D1** is answered.
 ## 7. Applying
 
 Everything runs inside `ctx.storage.transactionSync()`. DO SQLite is not D1
-(`sudoku-design.md` §2.1): a transaction spans the whole migration, so it lands
+(`../design.md` §2.1): a transaction spans the whole migration, so it lands
 whole or not at all, and the partial-failure ceremony the reference repos carry
 is not written here.
 

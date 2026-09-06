@@ -4,7 +4,7 @@ Removed features, parked decisions, and superseded designs. **Not read at
 session start.** Consult only when troubleshooting an unexplained behavior or
 when reopening one of the parked decisions below.
 
-Nothing here describes current state. `sudoku-design.md` does.
+Nothing here describes current state. `ROADMAP.md` and the docs it links do.
 
 ---
 
@@ -112,3 +112,66 @@ nothing about them was compromised to make this change — `solveLogically` stil
 takes an `allowed` set. What would have to come back is monotonicity: it was
 never proven, because nothing came to need it. Reopen this only if the players
 outgrow a 32-clue 9×9, which is the good version of this problem.
+
+---
+
+## Standalone sudoku — folded into a games hub 2026-09-06
+
+The project was a single-game site: `Social-Sudoku`, one Worker, one Durable
+Object per family code owning both live session state and historical stats. It
+is now the Carson Family Gameroom — one site, several games, shared profiles
+and a shared play record. The pre-pivot tree is tagged `v0-standalone-sudoku`.
+
+Current state is `ROADMAP.md` and `docs/architecture.md`. What follows is only
+what was superseded and why, for anyone wondering where a decision went.
+
+### Stats moved from DO SQLite to D1
+
+The design put `results` and `bests` in the family Durable Object's SQLite, with
+one DO per family code, on the reasoning that it kept everything in one
+consistency domain and avoided a separate database.
+
+Three things broke that. There is exactly one family, so per-family-code
+tenancy was solving a problem that does not exist. Stats became cross-game, and
+a DO scoped to a room cannot answer a question spanning games it never hosted.
+And profiles are read to paint the hub's landing page, which would mean waking
+a Durable Object to render a front page.
+
+The cost paid: DO SQLite has `ctx.storage.transactionSync()`, so the D1
+half-applied-migration trap did not apply and the design said so explicitly.
+D1 re-introduces it. The mitigation is the one-migration-is-one-`batch()` rule
+in `CLAUDE.md`, and the Globetrotters reference already handles it.
+
+The Durable Object survives, narrowed: live room state only, disposable, one
+instance per room code.
+
+### Slice 7 superseded
+
+`slice-07-storage-foundation.md` built the storage layer against DO SQLite. Its
+migrations-and-seeds machinery, drift reporting, statement splitter and admin
+page carry over almost whole into Phase 2; only the target changed. The file is
+kept for that machinery, not for its architecture.
+
+### The repo was not migrated
+
+Both imported design documents said everything moves to a new repo, marked
+Decided. It was rejected in favour of renaming and restructuring in place:
+history is the answer to "why is this like this" and this project has already
+needed it once, and the Cloudflare build connection was working and would have
+had to be rebuilt. Reasoning in `docs/restructure.md`.
+
+### The Vite base-path problem was never real here
+
+Both imported documents warn that each client bundle must build with its own
+base path (`/pit/`, `/sudoku/`) and call missing it the most common first-deploy
+failure. That is a bundler problem — a bundler rewrites asset URLs at build time
+and must be told the prefix. There is no bundler. Relative imports resolve at
+whatever depth the file sits.
+
+### Cooperative sudoku stayed cut
+
+`docs/gameroom.md` §5 uses cooperative mode as a worked example and rests its
+main argument on race and cooperative having opposite state topologies. That
+document was written without knowledge of the coop removal recorded above. The
+conclusion still holds on Pit-versus-sudoku-race alone. Coop remains cut, and
+the condition for reopening it is unchanged.
