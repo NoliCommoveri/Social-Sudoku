@@ -127,11 +127,51 @@ Step 6 is the one worth the trouble. It is what pays for the machinery that
 names the failing statement, and there is nowhere else to see an error from a
 migration.
 
-Steps 5 and 6 both need a way back to a clean database, which Session B's
-**Erase everything** provides. Until it exists, the way back is deleting the D1
-database in the dashboard and creating it again — cheap while the only rows in
-it are six seeded placeholders, and the reason these checks are worth doing now
-rather than after Phase 3.
+Steps 5 and 6 both need a way back to a clean database. **Erase everything** is
+it, and it is built — take the backup it asks for first, then Erase → Apply
+pending → Run seed. Doing these checks now rather than after Phase 3 is still
+the cheap moment: the only rows in the database are six seeded placeholders.
+
+### S7 — Check erase, export and re-import on the deployment
+
+Phase 2 Session B's acceptance criteria 2–8
+(`../../hub/specs/phase-2-session-b-erase-export.md` §9). Same loop as **S6** —
+push, wait for the build, open the page — and reachable as soon as this is on
+`main` and Cloudflare has built it. Do **S6** first: this needs a database with
+the schema applied and the six players seeded, which is what S6 leaves behind.
+
+Every route was driven end to end against a real SQLite before it shipped —
+apply, seed, export, all three erase refusals, erase with live foreign keys, the
+round trip back, a second import, an import into a moved schema, and two broken
+files. What that could not check is D1 itself: whether it answers
+`PRAGMA table_info`, whether a downloaded response sets a cookie on the phone,
+and whether the file input works there. Those are why this list exists.
+
+1. **Open `/admin`.** Backup, Restore and a red Danger panel are below the
+   existing table. Nothing is red that should not be.
+2. **Press Erase everything, then confirm without downloading.** It must refuse
+   and say the backup has to be downloaded first. This is the step the whole
+   mechanism exists for — if it erases anyway, stop and report it.
+3. **Download the backup.** Open the file. Six players in it, and no
+   `_migrations` table among the tables.
+4. **Confirm the erase.** Every table goes, including the ledger, and `/admin`
+   then reads every migration as pending — a fresh database.
+5. **Apply pending, Run seed, then import the file from step 3.** It should
+   report the rows it put in. Import it a second time: it says it ran and
+   nothing changes.
+6. **Take a backup, edit `001_schema.sql`** — add a column to `players` —
+   commit, wait, then Erase → Apply pending → import the old backup. It must
+   warn that the schema moved, import what still fits, and name what it dropped.
+   This is the case that actually happens; step 2 is the one that must never
+   fail.
+7. **Import a deliberately broken file** — delete a bracket in a copy — and
+   check it is refused with a sentence naming the problem rather than a wall of
+   SQLite errors.
+8. **Open `/` and `/sudoku/`.** Unchanged, as in S6 step 7.
+
+Step 6 leaves the schema changed. Put `001_schema.sql` back afterwards, erase,
+apply and seed again — which is now a browser action rather than a trip to the
+Cloudflare dashboard, and is the point of the session.
 
 ### S3 — Nothing else, for sudoku
 

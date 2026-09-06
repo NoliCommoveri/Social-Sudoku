@@ -16,11 +16,12 @@ A sudoku at `/sudoku/`, deployed and playable, behind a placeholder front page:
 - In-progress boards saved per size and tier in `localStorage`.
 - A one-link hub page at `public/index.html`. It is a placeholder; the designed
   shelf is Phase 2.
-- 84 tests under `test/`, run by GitHub Actions on every push.
+- 115 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
-  and the admin page at `/admin` that applies it — `worker/`.
+  and the admin page at `/admin` that applies it, seeds it, backs it up, erases
+  it and restores it — `worker/`.
 
 No Durable Object, no identity, no stored results. Nothing a player would miss
 has been written anywhere yet.
@@ -82,10 +83,18 @@ page renders before login and before any table exists, and puts the failing
 statement and its error on the page. **A2** is done; the database is empty until
 **S6** applies the schema from `/admin`.
 
-**Session B — erase, export, re-import.** Small–Medium, ~30k. The third button,
-JSON export wired into the erase confirmation itself, and re-import. Separable
-from A, and must land before Phase 3 — the first phase writing a row anyone
-would miss.
+**Session B — erase, export, re-import.** Medium, ~45k. ✅ Built.
+[`docs/hub/specs/phase-2-session-b-erase-export.md`](docs/hub/specs/phase-2-session-b-erase-export.md)
+is the design. `worker/db/backup.js` is the pure half — the export document, its
+fingerprint, and the import plan — and `apply.js` gained the three D1 halves.
+The export download sets a ten-minute cookie holding the fingerprint of the
+snapshot it served, and the erase confirmation refuses without it, refuses when
+the database has changed since, and refuses until the word `erase` is typed:
+that is how the backup is unskippable with no client JavaScript and no secret.
+Erase drops one table per statement, retrying until a pass drops nothing new,
+because a batch that fails whole never makes progress against a foreign key.
+Import is tolerant of a schema that moved, which is the case that actually
+happens, and is `INSERT OR IGNORE` throughout. **S7** is the browser half.
 
 **Session C — gate, picker, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
 signing, the `gate` and `who` cookies, `/api/players` read-only, the picker, the
@@ -179,7 +188,9 @@ not exist at all until Phase 2.
 `docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
 close, all about the board, which nothing since has touched — and **S6**, the
-database and admin page, which can be checked nowhere but a deployment.
+database and admin page, which can be checked nowhere but a deployment. **S7**
+is open too and is not yet reachable: it checks Session B, which is spec'd and
+not built.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

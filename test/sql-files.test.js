@@ -132,6 +132,16 @@ test('no .sql file defines a trigger', () => {
   }
 });
 
+// The export orders rows by rowid so that identical data produces identical
+// bytes, which is what the erase fingerprint compares
+// (worker/db/backup.js). A WITHOUT ROWID table has no rowid to order by, and
+// the day one appears that stops being true silently.
+test('no migration declares a WITHOUT ROWID table', () => {
+  for (const name of migrationFiles) {
+    assert.ok(!/\bWITHOUT\s+ROWID\b/i.test(read(name)), `${name}: WITHOUT ROWID`);
+  }
+});
+
 // The ledger is created by the file it records. There is no bootstrap path and
 // no zeroth migration, so the first migration has to carry it.
 test('the first migration creates the ledger table', () => {
