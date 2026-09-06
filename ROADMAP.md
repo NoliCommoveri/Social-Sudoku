@@ -82,10 +82,16 @@ page renders before login and before any table exists, and puts the failing
 statement and its error on the page. **A2** is done; the database is empty until
 **S6** applies the schema from `/admin`.
 
-**Session B — erase, export, re-import.** Small–Medium, ~30k. The third button,
-JSON export wired into the erase confirmation itself, and re-import. Separable
-from A, and must land before Phase 3 — the first phase writing a row anyone
-would miss.
+**Session B — erase, export, re-import.** Medium, ~45k. Spec'd, not started:
+[`docs/hub/specs/phase-2-session-b-erase-export.md`](docs/hub/specs/phase-2-session-b-erase-export.md).
+The third button, the JSON export that is its precondition, and re-import — one
+session because `CLAUDE.md` forbids the cuts between them. The export download
+sets a short-lived cookie that the erase confirmation requires, which is how the
+backup becomes unskippable with no client JavaScript and no secret; import is
+tolerant of a schema that moved, because a schema that moved is why anyone
+erased. Blocked on nothing, and it unblocks **S6** steps 5 and 6, which need a
+way back to a clean database. Must land before Phase 3 — the first phase writing
+a row anyone would miss.
 
 **Session C — gate, picker, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
 signing, the `gate` and `who` cookies, `/api/players` read-only, the picker, the
@@ -179,7 +185,9 @@ not exist at all until Phase 2.
 `docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
 close, all about the board, which nothing since has touched — and **S6**, the
-database and admin page, which can be checked nowhere but a deployment.
+database and admin page, which can be checked nowhere but a deployment. **S7**
+is open too and is not yet reachable: it checks Session B, which is spec'd and
+not built.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

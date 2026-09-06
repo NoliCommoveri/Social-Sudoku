@@ -133,6 +133,40 @@ database in the dashboard and creating it again — cheap while the only rows in
 it are six seeded placeholders, and the reason these checks are worth doing now
 rather than after Phase 3.
 
+### S7 — Check erase, export and re-import on the deployment
+
+Phase 2 Session B's acceptance criteria 2–8
+(`../../hub/specs/phase-2-session-b-erase-export.md` §9). Same loop as **S6** —
+push, wait for the build, open the page — and reachable once Session B is on
+`main`. Do **S6** first: this needs a database with the schema applied and the
+six players seeded, which is what S6 leaves behind.
+
+1. **Open `/admin`.** Backup, Restore and a red Danger panel are below the
+   existing table. Nothing is red that should not be.
+2. **Press Erase everything, then confirm without downloading.** It must refuse
+   and say the backup has to be downloaded first. This is the step the whole
+   mechanism exists for — if it erases anyway, stop and report it.
+3. **Download the backup.** Open the file. Six players in it, and no
+   `_migrations` table among the tables.
+4. **Confirm the erase.** Every table goes, including the ledger, and `/admin`
+   then reads every migration as pending — a fresh database.
+5. **Apply pending, Run seed, then import the file from step 3.** It should
+   report the rows it put in. Import it a second time: it says it ran and
+   nothing changes.
+6. **Take a backup, edit `001_schema.sql`** — add a column to `players` —
+   commit, wait, then Erase → Apply pending → import the old backup. It must
+   warn that the schema moved, import what still fits, and name what it dropped.
+   This is the case that actually happens; step 2 is the one that must never
+   fail.
+7. **Import a deliberately broken file** — delete a bracket in a copy — and
+   check it is refused with a sentence naming the problem rather than a wall of
+   SQLite errors.
+8. **Open `/` and `/sudoku/`.** Unchanged, as in S6 step 7.
+
+Step 6 leaves the schema changed. Put `001_schema.sql` back afterwards, erase,
+apply and seed again — which is now a browser action rather than a trip to the
+Cloudflare dashboard, and is the point of the session.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
