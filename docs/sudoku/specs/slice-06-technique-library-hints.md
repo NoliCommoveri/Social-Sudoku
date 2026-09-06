@@ -236,7 +236,7 @@ sequence are checked by eye on `dev.html` and on the phone — see criterion 6.
 | 5 | Every link between the game and the library is relative and works from both pages (slice 1 §2; slice 11 depends on it). | CI, spot-checked local |
 | 6 | The four library boards are legible at 360px portrait with no zoom, and the three highlight roles are distinguishable. | **S-item** |
 | 7 | Assist counters survive a reload and are visible on the page. | local |
-| 8 | `public/src/core/` still imports nothing outside itself; `no-hardcoded-sizes.test.js` passes with its one exemption. | CI |
+| 8 | `public/sudoku/core/` still imports nothing outside itself; `no-hardcoded-sizes.test.js` passes with its one exemption. | CI |
 
 Criterion 6 needs the phone, like slice 1's criterion 3 and slice 3's criterion
 4. **Add it to `questions.md` as an S-item when this slice starts** — a

@@ -66,8 +66,8 @@ from taste, so changing one is a project-level decision, not a slice-level one.
   `public/`. The Worker script added in slice 7 is bundled by `wrangler` on
   Cloudflare's build machine, is never served, and does not relax this for a
   single client file — `slice-07-storage-foundation.md` §2 draws the line.
-- **No runtime dependencies.** Zero. Everything in `public/src/` is written here.
-- **Pure core.** `public/src/core/` never touches the DOM, `window`, or storage. It is
+- **No runtime dependencies.** Zero. Everything in `public/sudoku/` is written here.
+- **Pure core.** `public/sudoku/core/` never touches the DOM, `window`, or storage. It is
   importable by both the browser and the CI test runner, which is what lets the
   same tests cover both.
 - **Size-parameterized from line one.** No module outside `sizes.js` may contain

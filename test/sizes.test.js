@@ -8,7 +8,7 @@ import assert from 'node:assert/strict';
 import {
   SIZES, SIZE_KEYS, DEFAULT_SIZE_KEY,
   TIER_IDS, TIER_LABELS, DEFAULT_TIER_ID, tierFor,
-} from '../public/src/core/sizes.js';
+} from '../public/sudoku/core/sizes.js';
 
 test('every size defines every tier, and no others', () => {
   for (const sizeKey of SIZE_KEYS) {

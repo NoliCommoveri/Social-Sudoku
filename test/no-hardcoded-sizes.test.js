@@ -8,7 +8,7 @@ import { readdirSync, readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 
-const CORE_DIR = fileURLToPath(new URL('../public/src/core/', import.meta.url));
+const CORE_DIR = fileURLToPath(new URL('../public/sudoku/core/', import.meta.url));
 
 // The three side lengths and their cell counts. 2 is deliberately absent: it is
 // an honest box dimension at 4x4 and 6x6 and a dozen other things besides, so a

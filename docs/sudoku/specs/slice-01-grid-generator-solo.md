@@ -298,7 +298,7 @@ than one value of it exists yet.
 
 **`no-hardcoded-sizes.test.js`**
 
-Reads every file in `public/src/core/` except `sizes.js` and fails on a
+Reads every file in `public/sudoku/core/` except `sizes.js` and fails on a
 standalone numeric literal drawn from the banned set:
 
 ```
@@ -345,7 +345,7 @@ than as an assumption that someone will get round to it.
 | 5 | A full 9×9 solve on the Android phone in portrait — no keyboard, no horizontal scroll, no pinch-zoom. | **S2** step 3 |
 | 6 | A full 9×9 solve on the Chromebook using only the keyboard. | **S2** step 4 |
 | 7 | Reload mid-puzzle restores the board, the givens, and the undo stack. | local |
-| 8 | `public/src/core/` imports nothing — not from `ui/`, not from `node:`, not from a URL. | CI |
+| 8 | `public/sudoku/core/` imports nothing — not from `ui/`, not from `node:`, not from a URL. | CI |
 
 Criterion 3 is measured by `dev.html` on the phone and is deliberately not
 asserted in CI: a CI runner's speed says nothing about an Android phone, and an
