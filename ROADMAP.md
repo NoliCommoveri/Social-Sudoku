@@ -152,20 +152,29 @@ button. Three existing specs, all pure client work with no server in them.
 `docs/sudoku/specs/slice-04` (unwritten), `slice-05-solver.md`,
 `slice-06-technique-library-hints.md`. Small, Small–Medium, Medium.
 
-### Phase 5 — GameRoom
+### Phase 5 — Pit, on one device
+
+The whole game with no server under it: rules core, bots, the local driver, the
+table, scoring and the result row. Four sessions, each Medium, tabled in
+[`docs/pit/specs/README.md`](docs/pit/specs/README.md); the design is
+[`docs/pit/design.md`](docs/pit/design.md).
+
+Only multiplayer needs the Durable Object. The rules module is pure, the bots
+are a pure function of a view, and the client renders a view and sends actions,
+so all three run in a browser tab and the family can play against bots while the
+room is still unwritten. Phase 6 is then written against a rules module that
+exists rather than against `docs/gameroom.md` alone.
+
+### Phase 6 — GameRoom
 
 The Durable Object: seats, sockets, hibernation, reconnect, tick, per-player
 views. No game logic in it. [`docs/gameroom.md`](docs/gameroom.md). Medium.
 
-### Phase 6 — Pit
+### Phase 7 — Pit on the room
 
-Rules module, then client, then the ring. Playable against humans only.
-[`docs/pit/design.md`](docs/pit/design.md). Medium, likely two sessions.
-
-### Phase 7 — Pit bots
-
-The game is thin at four players and the kids are not always all available.
-Medium.
+The local driver is replaced by a socket to `GameRoom` and the same client plays
+against the family. The rules module does not change; the result row moves from
+the client to the room. Medium.
 
 ### Phase 8 — Sudoku race
 
@@ -175,7 +184,7 @@ already supports this — see `docs/architecture.md` §7. Medium.
 ### Phase 9 — Little-kid mode
 
 Pit with no text, pip counts, 5-card corners. Its own mode, not a slider.
-`docs/pit/design.md` §7. Medium.
+`docs/pit/design.md` §6. Medium.
 
 ### Phase 10 — PWA
 
@@ -191,10 +200,17 @@ against a game that already works. The alternative, building `GameRoom` first,
 means debugging the hardest component before the pipeline that deploys it has
 ever carried anything.
 
-**The kids get something in Phase 2, not Phase 6.** Profiles with avatars are
+**The kids get something in Phase 2, not Phase 5.** Profiles with avatars are
 the part a 5-year-old cares about, and they land before any new game does. A
 shelf with one game on it and everyone's face on the front page is a real thing
 to show them; a half-built trading game is not.
+
+**The game before the room.** Pit's rules, bots and client are client-side
+work, so building them first means a playable game four sessions in and a rules
+bug debugged in a tab rather than through a socket. The cost is that the room
+contract is validated against a local driver before the real room exists, and
+the session that writes `GameRoom` will find the gaps — one session's friction,
+paid once. `docs/pit/specs/README.md` states it in full.
 
 **Sudoku finishes late, on purpose.** Pencil marks and the technique library are
 genuinely wanted, but they improve a game that is already playable. The hub does
