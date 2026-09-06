@@ -129,10 +129,18 @@ No move-by-move history. No replays. The record answers *what happened*, not
 
 ## 5. Open
 
-- **D1 (carried over) — the passphrase, and the four screen names to seed.**
-  Does not block Phase 2, which commits placeholders. Your answer is delivered
-  by editing the seed file in the GitHub web editor and pressing **Run seed**,
-  which is exactly the workflow seeds exist for.
+- **D1 (carried over) — the passphrase, and the six screen names to seed.**
+  Does not block Phase 2, which ships placeholders in
+  `worker/db/sql/seed_players.sql`. Your answer is delivered by editing that
+  file in the GitHub web editor and pressing **Run seed**, which is exactly the
+  workflow seeds exist for — with one thing worth knowing before you do it:
+  the seed will not change a row that already exists, because every statement
+  in it is `ON CONFLICT DO NOTHING`. So the names are worth getting right
+  *before* the first **Run seed**; after it, renaming is the picker's job. The
+  avatar keys in that file must be names the built-in set actually contains.
+
+  The passphrase itself is not in the database and is not seeded. It is the
+  Worker secret `FAMILY_PASSPHRASE`, set in the dashboard — setup task **A3**.
 - **I1 — Does the hub show cross-game standings on the front page, or does each
   game keep its own?** *Rec: front page shows the play log and a small overall
   tile; detailed stats live inside each game.* A leaderboard is the first thing

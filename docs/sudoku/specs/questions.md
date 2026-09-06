@@ -92,6 +92,47 @@ old.
 Answer 2 with a rough time and whether anyone got stuck, not a yes or no. It is
 the only measurement in this project that a test cannot take.
 
+### S6 — Check the database and the admin page on the deployment
+
+Phase 2 Session A's behaviour lives entirely in a Worker talking to D1, and
+there is no `wrangler dev` here — the loop is push, wait for the build, open the
+page. None of this can be closed by CI or by me. **A2 comes first**: without a
+real database id in `wrangler.jsonc` the deploy fails and nothing below is
+reachable.
+
+Any browser, either device. In this order — each step is the setup for the next.
+
+1. **Open `/admin` on the fresh database.** Everything pending, no error, and a
+   line saying the database has no tables yet. Nothing red.
+2. **Press Apply pending.** The migration goes to *applied* with a timestamp.
+   Press it again: "Nothing pending."
+3. **Press Run seed.** Six players go in. Press it again: it says it ran, and
+   nothing changes — that is the ON CONFLICT rule doing its job, and it is what
+   makes editing `seed_players.sql` a safe way to fix a name.
+4. **Edit `seed_players.sql`** — change a screen name — commit, wait for the
+   build, press Run seed. The name does *not* change, because the row exists.
+   That is correct and is the thing to know before Session C: renaming a player
+   is the picker's job, not the seed file's.
+5. **Edit `001_schema.sql`** — a comment is enough — commit, wait, reload
+   `/admin`. It must show **drifted** in red with both checksums, and Apply
+   pending must not reapply it. Put the comment back afterwards.
+6. **Break `001_schema.sql` on purpose** — delete a closing bracket — commit,
+   wait, and on a *fresh* database press Apply pending. The page must print the
+   failing statement and SQLite's message, and the migration must still read as
+   pending. Undo it afterwards.
+7. **Open `/` and `/sudoku/`.** Unchanged: same board, same behaviour, no sign
+   anywhere that a database exists.
+
+Step 6 is the one worth the trouble. It is what pays for the machinery that
+names the failing statement, and there is nowhere else to see an error from a
+migration.
+
+Steps 5 and 6 both need a way back to a clean database, which Session B's
+**Erase everything** provides. Until it exists, the way back is deleting the D1
+database in the dashboard and creating it again — cheap while the only rows in
+it are six seeded placeholders, and the reason these checks are worth doing now
+rather than after Phase 3.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
