@@ -158,7 +158,8 @@ Both imported design documents said everything moves to a new repo, marked
 Decided. It was rejected in favour of renaming and restructuring in place:
 history is the answer to "why is this like this" and this project has already
 needed it once, and the Cloudflare build connection was working and would have
-had to be rebuilt. Reasoning in `docs/restructure.md`.
+had to be rebuilt. The repo was renamed `carson-gameroom` and the tree moved
+under `public/sudoku/` in place; GitHub redirects the old name.
 
 ### The Vite base-path problem was never real here
 
