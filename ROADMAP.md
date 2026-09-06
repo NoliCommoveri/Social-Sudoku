@@ -8,23 +8,27 @@ people who know each other, not for the public internet.
 
 ## What exists today
 
-A sudoku at `/sudoku/`, deployed and playable, behind a placeholder front page:
+A sudoku at `/sudoku/`, deployed and playable, behind a hub that knows who you
+are:
 
 - Grid model, seeded generator, and clue-count difficulty tiers at 4×4, 6×6 and
   9×9 — `public/sudoku/core/`, about 600 lines, zero dependencies.
 - Solo play with undo, redo, and a check button — `public/sudoku/ui/`.
 - In-progress boards saved per size and tier in `localStorage`.
-- A one-link hub page at `public/index.html`. It is a placeholder; the designed
-  shelf is Phase 2.
-- 115 tests under `test/`, run by GitHub Actions on every push.
+- The hub at `public/index.html`: a passphrase gate, the picker, and the shelf
+  the games sit on, drawing from `public/shared/` — the tokens, the thirty
+  avatars, and the two calls the client makes.
+- 154 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
   and the admin page at `/admin` that applies it, seeds it, backs it up, erases
   it and restores it — `worker/`.
+- Identity: the gate at `/gate`, two signed cookies, and `/api/players` —
+  `worker/auth.js`, `worker/gate.js`, `worker/api.js`.
 
-No Durable Object, no identity, no stored results. Nothing a player would miss
-has been written anywhere yet.
+No Durable Object and no stored results. Profiles can be picked, not yet
+edited; nothing a player would miss has been written anywhere yet.
 
 ## The five things this is for
 
@@ -96,11 +100,17 @@ because a batch that fails whole never makes progress against a foreign key.
 Import is tolerant of a schema that moved, which is the case that actually
 happens, and is `INSERT OR IGNORE` throughout. **S7** is the browser half.
 
-**Session C — gate, picker, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
-signing, the `gate` and `who` cookies, `/api/players` read-only, the picker, the
-avatar set, `public/shared/theme.css`, the shelf. Blocked on **A3**; **A4**
-follows it. This one sits at the top of its band and splits at the theme/shelf
-boundary if the avatar SVGs run long.
+**Session C — gate, picker, shelf.** Medium–Large, ~60k. ✅ Built.
+[`docs/hub/specs/phase-2-session-c-gate-picker-shelf.md`](docs/hub/specs/phase-2-session-c-gate-picker-shelf.md)
+is the design. `worker/auth.js` is the pure half — the HMAC, the two cookies,
+and the check that keeps the gate's redirect on this site — and `gate.js` and
+`api.js` are the halves that touch requests. The gate covers `/api/*` and
+nothing else: the shell is a static file served before the Worker runs, so it
+renders a spinner and no data until `/api/players` answers, and `/admin` stays
+exempt because a gated `/admin` is a database that can never be brought up.
+`public/shared/` gains the tokens, the thirty avatars, the game list and the
+client's two calls; `public/hub/` is the picker and the shelf. Needs **A3** to
+be usable at all, and **A4** follows it. **S8** is the browser half.
 
 **Session D — editing a profile.** Small–Medium, ~30k. Create a profile, change
 a screen name, change an avatar: the write half of `/api/players` and the
@@ -187,10 +197,11 @@ not exist at all until Phase 2.
 
 `docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
-close, all about the board, which nothing since has touched — and **S6**, the
-database and admin page, which can be checked nowhere but a deployment. **S7**
-is open too and is not yet reachable: it checks Session B, which is spec'd and
-not built.
+close, all about the board, which nothing since has touched — and **S6**,
+**S7** and **S8**, which can be checked nowhere but a deployment. They run in
+that order: S6 leaves a database with the schema and the six players in it, S7
+erases and rebuilds it, and S8 needs both plus setup task **A3**, without which
+nobody can get past the gate.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

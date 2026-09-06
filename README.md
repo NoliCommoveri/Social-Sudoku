@@ -4,8 +4,8 @@ One site at `games.immotus.app` holding several games, shared player profiles,
 and a record of what the family has played.
 
 Sudoku is built and playable — solo at 4×4, 6×6 and 9×9 with three difficulty
-tiers. A Pit-style trading game is next. Everything is sized for six people who
-live together.
+tiers — behind a family passphrase, a profile picker and a shelf. A Pit-style
+trading game is next. Everything is sized for six people who live together.
 
 ## Where things are
 
@@ -22,7 +22,10 @@ live together.
 - **`docs/sudoku/`**, **`docs/pit/`** — per-game design and slice specs.
 - **`public/`** — everything served. Plain ES modules, no build step, no runtime
   dependencies. One directory per game: `public/sudoku/`. `public/index.html`
-  is the hub front page.
+  is the hub front page, `public/hub/` its picker and shelf, and
+  `public/shared/` what every screen draws from.
+- **`worker/`** — the Worker: routing, identity, the admin page, and everything
+  that touches D1. Never served.
 - **`test/`** — `node:test` suites, run by GitHub Actions on every push.
 
 `public/sudoku/dev.html` is a developer page: generator timing on the actual

@@ -38,7 +38,11 @@ for isolation that six players do not need.
 - **Static assets** — `public/` is the assets directory. A request whose path
   matches a file gets the file, with no Worker invocation and no charge.
 - **`/api/*`** — no file matches, so it falls through to the Worker script.
-  Identity, profiles, stats reads.
+  Identity, profiles, stats reads. Everything under it is behind the gate
+  (§2.2).
+- **`/gate`** — the family passphrase page. Server-rendered, no client
+  JavaScript, and the only screen that can be reached without having answered
+  it.
 - **`/admin`** — the database page (§3.2). Not under `/api/` because it is a
   page rather than an endpoint, and outside the passphrase gate because it has
   to render before a passphrase exists and while the database that would hold
@@ -51,7 +55,27 @@ Deployment is unchanged from today: push to `main`, Cloudflare's GitHub
 integration builds and runs `wrangler deploy` on its own build machine. Nobody
 types a command.
 
-### 2.1 No build step, still
+### 2.1 The gate, and what it can cover
+
+One shared passphrase, the Worker secret `FAMILY_PASSPHRASE`, typed once per
+device. It sits in front of `/api/*` and nothing else, and the reason is the
+assets binding: `public/index.html` is a file, so it is served before this
+script runs at all. Gating the shell would mean serving every page from the
+Worker.
+
+That is not the loss it sounds like. **The shell is public; the data is not.**
+The hub renders a heading and a spinner, then asks `/api/players` — no name, no
+face and no result reaches a browser that has not answered the gate.
+
+`/admin` is exempt for a different reason and permanently: it has to render
+before a passphrase exists, and the passphrase is a secret rather than a row, so
+a gated `/admin` is a database that can never be brought up.
+
+Both cookies — `gate` and `who` — are HMAC-signed with `SESSION_SECRET`.
+[`identity-and-stats.md`](identity-and-stats.md) §3.3 is the design;
+`docs/hub/specs/phase-2-session-c-gate-picker-shelf.md` is how it was built.
+
+### 2.2 No build step, still
 
 `public/` is plain ES modules loaded directly by the browser. No bundler, no
 transpile, no TypeScript, no npm dependency. This is downstream of the no-CLI
@@ -173,6 +197,9 @@ The modules:
 
 ```
 worker/index.js          routing
+worker/auth.js           pure: HMAC signing, the two cookies
+worker/gate.js           the passphrase page
+worker/api.js            /api/players, /api/who
 worker/admin.js          the page and its seven routes
 worker/db/plan.js        pure: splitter, checksums, applied/pending/drifted
 worker/db/backup.js      pure: the export document, its fingerprint, the import plan
@@ -208,8 +235,9 @@ more fragile, and more expensive than the file it replaced.
 Named so a future session does not add one reflexively.
 
 - **KV** — D1 answers everything, and nothing needs edge-cached config.
-- **R2** — avatars are a fixed built-in set rendered as inline SVG, not uploads.
-  No file storage, and no image moderation problem with four children.
+- **R2** — avatars are a fixed built-in set of thirty inline SVG glyphs
+  (`public/shared/avatars.js`), not uploads. No file storage, and no image
+  moderation problem with four children.
 - **Queues, Workflows, Vectorize, Hyperdrive, Workers AI** — nothing here is
   asynchronous, vector-shaped, or talking to a Postgres.
 
@@ -274,7 +302,11 @@ Dashboard actions, in order. None has a CLI step.
   schema to it from `/admin`, which happens after this branch is on `main`.
 - **A3 — Set two secrets.** Worker → Settings → Variables and Secrets →
   Encrypted. `FAMILY_PASSPHRASE` and `SESSION_SECRET` (any long random string).
-  *Phase 2.*
+  Both are needed before anybody can get past the gate — until they are set,
+  `/gate` says so and `/admin` carries on working. `FAMILY_PASSPHRASE` is the
+  word the 5-year-old types, so it is one word everybody can spell; case and
+  stray spaces are ignored. Changing either later logs every device out, which
+  is the whole of that story. *Phase 2, and **S8** is blocked on it.*
 - **A4 — Add the custom domain.** Worker → Settings → Domains & Routes → Add
   custom domain → `games.immotus.app`. The zone is already on Cloudflare, so the
   DNS record and certificate are automatic. *Phase 2.*

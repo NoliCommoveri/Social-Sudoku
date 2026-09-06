@@ -67,10 +67,12 @@ A fixed built-in set of inline SVG glyphs, chosen from a grid. Not uploads.
 - They render at any size, in either theme, and never 404.
 - A 4-year-old picks a fox because it is a fox. Nothing to read.
 
-**Rec: 24–30 of them, one screenful, bold silhouettes distinguishable at 32px.**
-Animals, space, food, monsters. *Would revisit if:* the kids want to draw their
-own, which is a better answer than any set I would pick — it becomes an SVG
-committed to the repo, still no upload path.
+**Thirty of them, one screenful, bold silhouettes distinguishable at 32px** —
+animals first, then space, food and monsters, in `public/shared/avatars.js`.
+Each has one tint of its own and sits on a disc, which is what keeps a glyph
+legible at 96px in the picker and at 56px in the family strip. *Would revisit
+if:* the kids want to draw their own, which is a better answer than any set I
+would pick — it becomes an SVG committed to the repo, still no upload path.
 
 Two players may not hold the same avatar. It is the primary way a pre-reader
 identifies a row, so uniqueness matters more than choice.
@@ -79,10 +81,13 @@ identifies a row, so uniqueness matters more than choice.
 
 Through the gate, the hub shows every profile as a big avatar tile. Tap yours.
 A second signed cookie remembers that choice on that device, so the
-12-year-old's phone opens straight to them and the shared tablet shows the
-picker every time.
+12-year-old's phone opens straight to them.
 
-Switching is always one tap away from the header. No confirmation, no password.
+Switching is always one tap away from the header, and the picker it opens
+carries a **Nobody** tile that clears the device. That is the shared tablet's
+answer: whoever hands it on taps Nobody, and the next person gets the picker
+rather than somebody else's face. No confirmation, no password, in either
+direction.
 
 **On sibling impersonation:** it is possible, deliberately. The deterrent is
 that every play is logged with a timestamp and the family can see it, which is
@@ -93,16 +98,22 @@ very little and costs a support job the first time one of them forgets it.
 
 | Cookie | Holds | Lifetime | Cleared by |
 |---|---|---|---|
-| `gate` | proof the passphrase was entered | 1 year | changing the secret |
-| `who` | the player id last picked here | 1 year | tapping another profile |
+| `gate` | proof the passphrase was entered | 1 year | changing either secret |
+| `who` | the player id last picked here | 1 year | tapping another profile, or Nobody |
 
 Both are HMAC-signed with `SESSION_SECRET` and verified on every `/api/*` call.
 Signing is the difference between "the client says it is player 3" and "the
-server issued this". Roughly forty lines, and it is what stops a stray script
-writing results as somebody else.
+server issued this". Roughly forty lines in `worker/auth.js`, and it is what
+stops a stray script writing results as somebody else.
 
-Rotating `SESSION_SECRET` invalidates both everywhere, which is the whole of
-the "log everyone out" story.
+Neither is encrypted, because neither is secret — a player id is on the screen.
+The expiry is inside the signature rather than left to the cookie's `Max-Age`,
+which is the one number a browser will happily change.
+
+The `gate` cookie also carries a short fingerprint of the passphrase that
+issued it, so **changing `FAMILY_PASSPHRASE` asks everybody again** and
+rotating `SESSION_SECRET` invalidates both cookies everywhere. That is the whole
+of the "log everyone out" story, and it keeps no state anywhere.
 
 ## 4. The record
 

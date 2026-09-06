@@ -173,6 +173,52 @@ Step 6 leaves the schema changed. Put `001_schema.sql` back afterwards, erase,
 apply and seed again — which is now a browser action rather than a trip to the
 Cloudflare dashboard, and is the point of the session.
 
+### S8 — Check the gate, the picker and the shelf on the phone
+
+Phase 2 Session C's acceptance criteria 2–10
+(`../../hub/specs/phase-2-session-c-gate-picker-shelf.md` §9). This is the
+first phase whose subject is a screen rather than a database, so most of it can
+only be answered by watching somebody use it.
+
+**Blocked on setup task A3** — `FAMILY_PASSPHRASE` and `SESSION_SECRET` in the
+Cloudflare dashboard. Until they are set, `/gate` says so and nobody gets in.
+Do **S6** and **S7** first: this needs the schema applied and the six players
+seeded.
+
+Do it on the Android phone, in portrait, on a device that has never opened the
+site. Steps 1–7 are yours; steps 8 and 9 are the ones that actually decide
+whether H5 holds, and they are somebody else's.
+
+1. **Open `/`.** It should show a moment of "Opening the gameroom…" and then the
+   gate. Type the word wrong once: it says so and does not let you in. Type it
+   right: you land on the picker. *(criteria 2, 3)*
+2. **Tap your own face.** The shelf, with your face in the bar and the ring on
+   your tile in the strip below. Everybody's face is visible without scrolling.
+   *(criterion 4)*
+3. **Close the tab and open `/` again.** Straight to the shelf, still you, no
+   gate. *(criterion 5)*
+4. **Tap the bar, then tap somebody else.** You are them. Tap the bar again and
+   choose **Nobody**: the picker comes back and stays until somebody is chosen.
+   *(criterion 6)*
+5. **Tap the Sudoku tile, play a couple of cells, then use the back link.** The
+   shelf, as you left it. *(criterion 7)*
+6. **Look for anything smaller than a thumb, and for horizontal scroll.**
+   Nothing on the hub should be under 64px or need a sideways drag. Do this on
+   the Chromebook too — it should be the same layout with more air, not a
+   different one. *(criterion 8)*
+7. **Open `/admin`** on a device that never answered the gate: it works, which
+   is deliberate. Then change `FAMILY_PASSPHRASE` in the dashboard and reload
+   `/`: every device asks again. Put it back. *(criteria 9, 10)*
+8. **Can the 5-year-old get from the front page into a game, alone, first
+   try?** Watch, do not coach. Where they hesitate is the finding, and "they
+   tapped the wrong face" is the most useful answer this list can produce.
+9. **Does the 12-year-old open it a second time without being asked?** Takes a
+   week to read and is the only honest measure of H5.
+
+Steps 8 and 9 are `design-language.md` §5's two questions, and they are the
+reason the rest of this exists. A "no" on either is not a bug report — it is the
+shelf reopening.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
