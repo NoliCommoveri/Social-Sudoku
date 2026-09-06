@@ -177,10 +177,11 @@ field of `State` and `State` is opaque to a room. `public/pit/room/local.js` is
 the driver the client talks to and Phase 7 replaces with a socket. Session 3 —
 the table — is next and is not spec'd.
 
-`docs/pit/design.md` §2.6 is the one thing session 2 found and did not settle: a
-seat that stops trading freezes its cards, and most four-seat rounds cannot then
-be won by anybody. It is the same question as an abandoned session, and session
-4 answers both.
+A seat that stops trading freezes its cards, and most four-seat rounds cannot
+then be won by anybody. `docs/pit/design.md` §2.6 settles it and nothing of it
+is built: pause, bot takeover of a seat idle for sixty seconds, and abandon.
+All three are rules actions, so they land before the table can draw a pause
+button, an abandon button, or the takeover countdown.
 
 ### Phase 6 — GameRoom
 
