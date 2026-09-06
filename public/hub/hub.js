@@ -1,10 +1,17 @@
-// The hub: the picker and the shelf, and the switch between them.
+// The hub: the picker, the shelf, the editor, and the switches between them.
 //
-// Two screens, one page:
+// Three screens, one page:
 //
 //   picker   nobody is chosen on this device yet, or somebody tapped to switch.
-//            Every live profile as a big face. Tap yours.
+//            Every live profile as a big face, plus the tile that makes a new
+//            one. Tap yours.
 //   shelf    the games, and the family strip along the bottom of them.
+//   editor   a name and thirty faces. Both ways in are on the picker — the
+//            new-player tile, and the button that changes the profile you are
+//            already on. That is where they belong: the picker is the screen
+//            whose subject is who you are, and the shelf's bar has room for one
+//            control rather than two (docs/design-language.md §3, which keeps
+//            the front page down to the games and the faces).
 //
 // The picker comes first on a device that has never been used, because a play
 // needs a player and asking once is cheaper than asking on the way into every
@@ -14,16 +21,37 @@
 //
 // Rendering is innerHTML into one container. There is nothing here worth a
 // framework, no dependency is allowed, and every screen redraws whole — the
-// most this page ever holds is thirty faces and a handful of tiles.
+// most this page ever holds is thirty faces and a handful of tiles. The one
+// thing that survives a redraw is what has been typed into the editor's name
+// field, which is why it is read into state on the way past rather than out of
+// the DOM at save time.
 
-import { avatarSvg, avatarTint } from '../shared/avatars.js';
+import { AVATARS, avatarSvg, avatarTint } from '../shared/avatars.js';
 import { GAMES } from '../shared/games.js';
-import { ApiError, getPlayers, setWho } from '../shared/api.js';
+import { NAME_MAX, normaliseName, profileProblem, takenAvatars } from '../shared/profile.js';
+import { ApiError, createPlayer, getPlayers, setWho, updatePlayer } from '../shared/api.js';
 
 const root = /** @type {HTMLElement} */ (document.getElementById('app'));
 
-/** @type {{ players: import('../shared/api.js').Player[], me: string | null, switching: boolean }} */
-const state = { players: [], me: null, switching: false };
+/**
+ * @typedef {{
+ *   id: string | null,
+ *   name: string,
+ *   avatar: string,
+ *   problem: { field: string, message: string } | null,
+ *   busy: boolean,
+ * }} Editing an open editor; `id` is null when the profile does not exist yet
+ */
+
+/**
+ * @type {{
+ *   players: import('../shared/api.js').Player[],
+ *   me: string | null,
+ *   switching: boolean,
+ *   editing: Editing | null,
+ * }}
+ */
+const state = { players: [], me: null, switching: false, editing: null };
 
 /** @param {string} text */
 const esc = (text) =>
@@ -75,6 +103,11 @@ function gameTile(game) {
  * ever shows and the one reached from the bar: only the second offers Nobody,
  * because clearing a device that has nobody on it is a button that does
  * nothing.
+ *
+ * The new-player tile is the same shape as a face, at the end of the row where
+ * the next face would go. A plus on a disc is the one glyph a pre-reader can be
+ * expected to already know, and putting it in the grid rather than in a toolbar
+ * keeps it above the 64px floor without a second layout.
  */
 function picker() {
   const tiles = state.players.map((player) => `<li>${playerTile(player, player.id === state.me)}</li>`);
@@ -86,14 +119,35 @@ function picker() {
       </button></li>`
     : '';
 
-  if (state.players.length === 0) {
-    return `<h1 class="ask">Nobody lives here yet</h1>
-    <p class="note">There are no profiles in the database. Somebody with the keys to
-    <code>/admin</code> presses <strong>Run seed</strong>, and everyone appears.</p>`;
-  }
+  const add = `<li><button class="who add" type="button" id="new-player">
+      <span class="disc"><svg viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+        <path d="M24 13v22M13 24h22" stroke="currentColor" stroke-width="5" stroke-linecap="round"/>
+      </svg></span>
+      <span>New player</span>
+    </button></li>`;
 
-  return `<h1 class="ask">${state.switching ? 'Who is playing now?' : 'Who is playing?'}</h1>
-  <ul class="picker">${tiles.join('')}${nobody}</ul>`;
+  const heading = state.players.length === 0
+    ? `<h1 class="ask">Nobody lives here yet</h1>
+      <p class="note">Make the first profile, or press <strong>Run seed</strong> on
+      <code>/admin</code> and everybody appears at once.</p>`
+    : `<h1 class="ask">${state.switching ? 'Who is playing now?' : 'Who is playing?'}</h1>`;
+
+  const change = state.players.some((player) => player.id === state.me)
+    ? `<div class="row wide">
+        <button class="btn" type="button" id="edit-me">
+          <svg class="pencil" viewBox="0 0 48 48" aria-hidden="true" focusable="false">
+            <path d="M30 8l10 10-20 20-12 2 2-12z" fill="none" stroke="currentColor"
+                  stroke-width="4" stroke-linejoin="round"/>
+            <path d="M27 11l10 10" fill="none" stroke="currentColor" stroke-width="4"/>
+          </svg>
+          Change my name or face
+        </button>
+      </div>`
+    : '';
+
+  return `${heading}
+  <ul class="picker">${tiles.join('')}${nobody}${add}</ul>
+  ${change}`;
 }
 
 /** The shelf: the games, then everybody's face. */
@@ -117,8 +171,67 @@ function shelf() {
   </section>`;
 }
 
+/**
+ * The editor. One name and thirty faces, and it is the same screen for a
+ * profile that exists and one that does not — the only differences are the
+ * heading and the word on the button.
+ *
+ * A face another live player holds is shown, disabled, with their name under
+ * it. Hiding it would leave a grid that changes shape as the family grows, and
+ * "the fox is Alex's" is the answer to why it cannot be picked; an absent tile
+ * is not an answer to anything.
+ */
+function editor() {
+  const editing = /** @type {Editing} */ (state.editing);
+  const others = state.players.filter((player) => player.id !== editing.id);
+  const taken = takenAvatars(others);
+  const owner = new Map(others.map((player) => [player.avatar, player.name]));
+  const problem = editing.problem;
+
+  const faces = AVATARS.map((entry) => {
+    const isTaken = taken.has(entry.key);
+    const chosen = entry.key === editing.avatar;
+    return `<button class="face-choice" type="button" data-face="${esc(entry.key)}"
+      aria-pressed="${chosen}"${isTaken ? ' disabled' : ''}>
+      ${face(entry.key)}
+      <span>${esc(isTaken ? owner.get(entry.key) || entry.label : entry.label)}</span>
+    </button>`;
+  }).join('');
+
+  return `<header class="bar">
+    <h1 class="wordmark">${editing.id ? 'You' : 'Somebody new'}</h1>
+    <button class="btn" type="button" id="cancel">Back</button>
+  </header>
+
+  <div class="editor">
+    <div class="preview">
+      ${face(editing.avatar)}
+      <b>${esc(editing.name || 'No name yet')}</b>
+    </div>
+
+    <label class="field">
+      <span class="section">Name</span>
+      <input id="name" type="text" value="${esc(editing.name)}" maxlength="${NAME_MAX}"
+             autocomplete="off" autocapitalize="words" autocorrect="off" spellcheck="false"
+             enterkeyhint="done" placeholder="What should we call you?">
+    </label>
+    ${problem && problem.field === 'name' ? `<p class="note bad">${esc(problem.message)}</p>` : ''}
+
+    <h2 class="section">Face</h2>
+    ${problem && problem.field === 'avatar' ? `<p class="note bad">${esc(problem.message)}</p>` : ''}
+    <div class="faces">${faces}</div>
+
+    <div class="actions">
+      <button class="btn btn-accent" type="button" id="save"${editing.busy ? ' disabled' : ''}>
+        ${editing.busy ? 'Saving…' : editing.id ? 'Save' : 'Make me'}
+      </button>
+    </div>
+  </div>`;
+}
+
 function render() {
-  root.innerHTML = `<div class="shell">${state.me && !state.switching ? shelf() : picker()}</div>`;
+  const screen = state.editing ? editor() : state.me && !state.switching ? shelf() : picker();
+  root.innerHTML = `<div class="shell">${screen}</div>`;
 }
 
 /** @param {string} message */
@@ -155,11 +268,132 @@ async function pick(id) {
   }
 }
 
+/**
+ * Open the editor. `id` null makes a new profile, which starts on the first
+ * face nobody has — an empty grid with nothing chosen is a screen where the
+ * preview has no face in it, and the preview is the whole point of the screen.
+ *
+ * @param {string | null} id
+ */
+function openEditor(id) {
+  const player = id === null ? null : state.players.find((entry) => entry.id === id);
+  if (id !== null && !player) return;
+
+  const taken = takenAvatars(state.players);
+  const free = AVATARS.find((entry) => !taken.has(entry.key));
+
+  state.editing = {
+    id,
+    name: player ? player.name : '',
+    avatar: player ? player.avatar : (free ? free.key : ''),
+    problem: null,
+    busy: false,
+  };
+  render();
+}
+
+/** Back out of the editor, to whichever screen makes sense to have come from. */
+function closeEditor() {
+  state.editing = null;
+  render();
+}
+
+/**
+ * Put a refusal on the screen and take the reader to it.
+ *
+ * The scroll is the point: the save button follows the screen down past eight
+ * rows of faces, so a message rendered beside the name field is a message
+ * nobody is looking at when they press it.
+ *
+ * @param {{ field: string, message: string }} problem
+ */
+function showProblem(problem) {
+  const editing = /** @type {Editing} */ (state.editing);
+  editing.problem = problem;
+  editing.busy = false;
+  render();
+  const said = root.querySelector('.note.bad');
+  if (said) said.scrollIntoView({ block: 'center', behavior: 'smooth' });
+}
+
+/**
+ * Save, or create.
+ *
+ * The client checks first with the same module the Worker checks with, so the
+ * usual refusal — an empty name, a face somebody has — is instant and costs no
+ * round trip. It is a courtesy and not a guard: the Worker decides again on
+ * what actually arrives.
+ *
+ * Nothing here is optimistic. Picking a face is a thing you can undo by picking
+ * another one; a save that silently did not happen is a name you believe you
+ * changed, and finding that out a day later is worse than waiting 200ms.
+ */
+async function save() {
+  const editing = /** @type {Editing} */ (state.editing);
+  if (editing.busy) return;
+
+  const proposal = { name: normaliseName(editing.name), avatar: editing.avatar };
+  const others = state.players.filter((player) => player.id !== editing.id);
+
+  const problem = profileProblem(proposal, others);
+  if (problem) {
+    showProblem(problem);
+    return;
+  }
+
+  editing.busy = true;
+  editing.problem = null;
+  render();
+
+  try {
+    if (editing.id === null) {
+      const { player, me } = await createPlayer(proposal);
+      state.players = [...state.players, player];
+      state.me = me;
+    } else {
+      const { player } = await updatePlayer(editing.id, proposal);
+      state.players = state.players.map((entry) => (entry.id === player.id ? player : entry));
+    }
+    state.editing = null;
+    state.switching = false;
+    render();
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 401) return;
+    showProblem({
+      field: (err instanceof ApiError && err.field) || 'name',
+      message: err instanceof Error ? err.message : 'That did not save.',
+    });
+  }
+}
+
 // One listener on the container rather than one per tile: every screen here is
 // redrawn whole, and handlers attached to elements that no longer exist are the
 // bug that follows from that.
 root.addEventListener('click', (event) => {
   const target = /** @type {HTMLElement} */ (event.target);
+
+  if (state.editing) {
+    const chosen = target.closest('.face-choice');
+    if (chosen instanceof HTMLElement) {
+      state.editing.avatar = chosen.dataset.face || '';
+      state.editing.problem = null;
+      render();
+      return;
+    }
+    if (target.closest('#save')) save();
+    else if (target.closest('#cancel')) closeEditor();
+    return;
+  }
+
+  if (target.closest('#new-player')) {
+    openEditor(null);
+    return;
+  }
+
+  if (target.closest('#edit-me')) {
+    openEditor(state.me);
+    return;
+  }
 
   const tile = target.closest('.who');
   if (tile instanceof HTMLElement) {
@@ -176,6 +410,28 @@ root.addEventListener('click', (event) => {
   if (target.closest('#retry')) start();
 });
 
+// The name lives in state, not in the input: tapping a face redraws the screen,
+// and a redraw that threw away what had been typed would make choosing a face
+// and typing a name mutually exclusive.
+root.addEventListener('input', (event) => {
+  const field = /** @type {HTMLElement} */ (event.target);
+  if (state.editing && field.id === 'name') {
+    state.editing.name = /** @type {HTMLInputElement} */ (field).value;
+  }
+});
+
+// There is no <form> here — the editor is one screen among three rather than a
+// page of its own — so Enter has to be wired up by hand. An Android keyboard
+// shows "done" on that key (enterkeyhint), and a key that shows "done" and then
+// does nothing is worse than one that says "return".
+root.addEventListener('keydown', (event) => {
+  const field = /** @type {HTMLElement} */ (event.target);
+  if (state.editing && field.id === 'name' && event.key === 'Enter') {
+    event.preventDefault();
+    save();
+  }
+});
+
 async function start() {
   root.innerHTML = '<div class="shell"><p class="note">Opening the gameroom…</p></div>';
   try {
@@ -183,6 +439,7 @@ async function start() {
     state.players = players;
     state.me = me;
     state.switching = false;
+    state.editing = null;
     render();
   } catch (err) {
     // A 401 has already navigated to the gate; anything else is ours to say.

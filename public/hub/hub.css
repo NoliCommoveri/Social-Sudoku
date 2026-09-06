@@ -178,6 +178,138 @@ h2.section {
   border: 2px dashed var(--edge);
 }
 
+/* The tile that makes a profile. Same shape as a face so it sits in the grid
+   where the next face would go, drawn as an outline so it does not read as a
+   person who is already here. */
+.add .disc {
+  color: var(--accent);
+  background: transparent;
+  border: 3px dashed var(--edge);
+}
+
+/* ---- the editor: a name, and thirty faces ------------------------------- */
+
+.editor {
+  display: grid;
+  gap: 0.75rem;
+}
+
+/* What you will look like, above the controls that change it. It is the reason
+   the editor is a screen rather than a text field: a 5-year-old is choosing a
+   fox, not filling in a form. */
+.preview {
+  display: grid;
+  justify-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  background: var(--panel-high);
+  box-shadow: var(--lift);
+
+  & .disc { --disc: 112px; }
+  & b {
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: var(--step-2);
+  }
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+
+  & input {
+    min-height: var(--tap);
+    padding: 0 1rem;
+    font: inherit;
+    font-size: var(--step-2);
+    color: var(--ink);
+    background: var(--panel);
+    border: 2px solid var(--edge);
+    border-radius: var(--radius);
+  }
+  & input:focus { border-color: var(--accent); outline: none; }
+}
+
+.faces {
+  display: grid;
+  /* Three across at 360px. Narrower would fit more faces on a screen and is
+     the wrong trade: the caption under a taken tile is somebody's name, and at
+     the 16px floor a column that cannot hold one breaks it across two lines
+     mid-word. */
+  grid-template-columns: repeat(auto-fill, minmax(6rem, 1fr));
+  gap: 0.5rem;
+}
+
+.face-choice {
+  display: grid;
+  justify-items: center;
+  gap: 0.25rem;
+  min-height: var(--tap);
+  padding: 0.4rem 0.2rem;
+  border: 2px solid transparent;
+  border-radius: var(--radius);
+  background: var(--panel);
+  transition: transform var(--motion), border-color var(--motion);
+
+  & .disc { --disc: 56px; }
+  & span {
+    max-width: 100%;
+    font-size: var(--step-0);
+    font-weight: 600;
+    color: var(--ink-soft);
+  }
+
+  &:active { transform: scale(0.94); }
+  &[aria-pressed='true'] {
+    border-color: var(--accent);
+    background: var(--panel-high);
+  }
+
+  /* Somebody else's face. Shown rather than hidden: the grid keeps its shape as
+     the family grows, and their name under it is the answer to why it cannot be
+     picked. */
+  &:disabled {
+    opacity: 0.45;
+    cursor: default;
+  }
+}
+
+/* Two lines rather than an ellipsis, because the caption under a taken tile is
+   somebody's name and "Grow…" twice over is two people with the same face. */
+.face-choice span {
+  overflow-wrap: break-word;
+  line-height: 1.15;
+}
+
+/* The save follows the screen down. Thirty faces are eight rows on a 360px
+   phone, and a button only reachable underneath them is a name somebody typed
+   and did not keep. */
+.editor .actions {
+  position: sticky;
+  bottom: 0;
+  display: flex;
+  gap: 0.75rem;
+  padding: 0.75rem 0 0.25rem;
+  background: linear-gradient(to top, var(--ground) 78%, transparent);
+
+  & .btn { flex: 1 1 auto; }
+}
+
+/* One button that fills the row it is in: the picker's "change me", and the
+   editor's save. Both are the only thing they are asking. */
+.row.wide .btn {
+  flex: 1 1 auto;
+}
+
+.pencil {
+  inline-size: 22px;
+  block-size: 22px;
+}
+
 /* ---- states ------------------------------------------------------------- */
 
 .note {

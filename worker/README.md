@@ -6,7 +6,7 @@ index.js        fetch(): /admin, /gate and /api/* handled here, everything else 
 admin.js        the database admin page and its seven routes
 auth.js         pure: HMAC signing, the gate and who cookies, safeNext
 gate.js         the passphrase page, and the check every /api/* call passes
-api.js          /api/players and /api/who
+api.js          /api/players and /api/who, read and write
 db/
   plan.js       pure: the statement splitter, checksums, applied/pending/drifted
   backup.js     pure: the export document, its fingerprint, the import plan
@@ -43,6 +43,8 @@ The other two surfaces:
 | `GET /gate` | reads | the passphrase page |
 | `POST /gate` | sets | the `gate` cookie, then 303s back to where you were |
 | `GET /api/players` | reads | every live profile, and which one this device is |
+| `POST /api/players` | writes | a new profile, and picks it if the device had nobody |
+| `PATCH /api/players/:id` | writes | a screen name, a face, or both |
 | `POST /api/who` | sets | the `who` cookie, or clears it |
 
 `plan.js` is split from `migrations.js` because `node --test` cannot import a
@@ -50,10 +52,12 @@ The other two surfaces:
 Everything with a decision in it takes strings as arguments and is tested;
 `migrations.js` turns files into strings and holds nothing worth testing.
 
-`gate.js` imports `public/shared/avatars.js`, which is the one import that
-crosses from here into `public/`. That module is pure — no DOM, no window — so
-wrangler bundles it like any other file, and the gate page gets real faces on
-it. The arrow only ever points this way.
+`gate.js` imports `public/shared/avatars.js` and `api.js` imports
+`public/shared/profile.js`. Those are the imports that cross from here into
+`public/`, and both modules are pure — no DOM, no window — so wrangler bundles
+them like any other file: the gate page gets real faces on it, and the editor
+and the Worker refuse a taken name by the same rule. The arrow only ever points
+this way.
 
 Tests may still *read* the `.sql` files with `node:fs`; reading is not
 importing. Two naming conventions make that work without importing

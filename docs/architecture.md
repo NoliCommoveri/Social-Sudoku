@@ -38,8 +38,8 @@ for isolation that six players do not need.
 - **Static assets** — `public/` is the assets directory. A request whose path
   matches a file gets the file, with no Worker invocation and no charge.
 - **`/api/*`** — no file matches, so it falls through to the Worker script.
-  Identity, profiles, stats reads. Everything under it is behind the gate
-  (§2.2).
+  Identity, profiles read and written, stats reads. Everything under it is
+  behind the gate (§2.2).
 - **`/gate`** — the family passphrase page. Server-rendered, no client
   JavaScript, and the only screen that can be reached without having answered
   it.

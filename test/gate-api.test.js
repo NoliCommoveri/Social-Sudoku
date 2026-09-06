@@ -1,4 +1,6 @@
-// The gate and the two endpoints, driven end to end with real Requests.
+// The gate and the reading endpoints, driven end to end with real Requests.
+// The writes Session D added are in test/players-write.test.js, which needs a
+// D1 stub that actually holds rows.
 //
 // This is further than the project's testing rule usually reaches -- "the
 // module that touches the platform is checked in a browser" -- and it is
@@ -246,9 +248,9 @@ test('bad JSON, wrong methods and unknown paths answer in JSON', async () => {
   );
   assert.equal(bad.status, 400);
 
-  const wrongMethod = await handleApi(req('/api/players', { method: 'POST', cookie: gate }), e, '/api/players');
+  const wrongMethod = await handleApi(req('/api/players', { method: 'DELETE', cookie: gate }), e, '/api/players');
   assert.equal(wrongMethod.status, 405);
-  assert.equal(wrongMethod.headers.get('allow'), 'GET');
+  assert.equal(wrongMethod.headers.get('allow'), 'GET, POST');
 
   const unknown = await handleApi(req('/api/nothing', { cookie: gate }), e, '/api/nothing');
   assert.equal(unknown.status, 404);

@@ -3,11 +3,8 @@
 Who a player is, how the site knows, and what it remembers about them.
 Delivers H3 and H4.
 
-Built across three sessions, and the seam between the first two matters: **§2
-and §3.2 — the gate, the picker and the two cookies — are Phase 2 Session C.
-§3 and §3.1's editing — creating a profile, changing a screen name, changing an
-avatar — are Session D.** §4, the record, is Phase 3, which needs the picker and
-not the editing. `../ROADMAP.md` has why the line falls there.
+§2, §3 and §3.2 — the gate, profiles, the picker and the two cookies — are
+Phase 2, built. §4, the record, is Phase 3.
 
 ## 1. This is a family, not a user base
 
@@ -35,8 +32,10 @@ and a code check on every new device.
 
 ## 3. Profiles
 
-A profile is a row, created from the hub by anybody who is through the gate. Not
-an account. No password.
+A profile is a row, created from the hub by anybody who is through the gate, and
+renamed and re-faced from there by anybody too. Not an account. No password.
+`hub/specs/phase-2-session-d-editing-a-profile.md` is the screen and the two
+endpoints.
 
 ```sql
 players(
@@ -75,7 +74,10 @@ if:* the kids want to draw their own, which is a better answer than any set I
 would pick — it becomes an SVG committed to the repo, still no upload path.
 
 Two players may not hold the same avatar. It is the primary way a pre-reader
-identifies a row, so uniqueness matters more than choice.
+identifies a row, so uniqueness matters more than choice. The editor shows all
+thirty and disables the ones other live players hold, with their name under
+them, so the answer to "why can I not have the dragon" is on the tile. A
+retired player releases theirs.
 
 ### 3.2 Picking who you are
 
@@ -88,6 +90,12 @@ carries a **Nobody** tile that clears the device. That is the shared tablet's
 answer: whoever hands it on taps Nobody, and the next person gets the picker
 rather than somebody else's face. No confirmation, no password, in either
 direction.
+
+The picker is also where a profile is made and changed — a **New player** tile
+in the grid, and a button that opens the editor on the profile this device is
+already on. Both live here rather than on the shelf, because this is the screen
+whose subject is who you are and the shelf's front page stays the games and the
+faces (`design-language.md` §3).
 
 **On sibling impersonation:** it is possible, deliberately. The deterrent is
 that every play is logged with a timestamp and the family can see it, which is
@@ -146,19 +154,17 @@ No move-by-move history. No replays. The record answers *what happened*, not
 
 ## 5. Open
 
-- **D1 (carried over) — the passphrase, and the six screen names to seed.**
-  Does not block Phase 2, which ships placeholders in
-  `worker/db/sql/seed_players.sql`. Your answer is delivered by editing that
-  file in the GitHub web editor and pressing **Run seed**, which is exactly the
-  workflow seeds exist for — with one thing worth knowing before you do it:
-  the seed will not change a row that already exists, because every statement
-  in it is `ON CONFLICT DO NOTHING`. So the names are worth getting right
-  *before* the first **Run seed**; after it, editing the file is no longer how a
-  name changes, and nothing in the site changes one until Session D. The avatar
-  keys in that file must be names the built-in set actually contains.
+- **D1 (carried over) — the passphrase.** It is not in the database and is not
+  seeded: it is the Worker secret `FAMILY_PASSPHRASE`, set in the dashboard —
+  setup task **A3**.
 
-  The passphrase itself is not in the database and is not seeded. It is the
-  Worker secret `FAMILY_PASSPHRASE`, set in the dashboard — setup task **A3**.
+  The six screen names are no longer a due out. `worker/db/sql/seed_players.sql`
+  ships placeholders, and the site renames them: press **Run seed** once and
+  then change them from the picker, which is what the family will do anyway and
+  what an 11-year-old can do without asking. Editing the seed file is only ever
+  how a player who *does not exist yet* is added, because every statement in it
+  is `ON CONFLICT DO NOTHING`, and the avatar keys in it must be names the
+  built-in set actually contains.
 - **I1 — Does the hub show cross-game standings on the front page, or does each
   game keep its own?** *Rec: front page shows the play log and a small overall
   tile; detailed stats live inside each game.* A leaderboard is the first thing
