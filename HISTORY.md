@@ -120,7 +120,7 @@ outgrow a 32-clue 9×9, which is the good version of this problem.
 The project was a single-game site: `Social-Sudoku`, one Worker, one Durable
 Object per family code owning both live session state and historical stats. It
 is now the Carson Family Gameroom — one site, several games, shared profiles
-and a shared play record. The pre-pivot tree is tagged `v0-standalone-sudoku`.
+and a shared play record. The pre-pivot tree is the `v0-standalone-sudoku` branch, at `a4718f6`.
 
 Current state is `ROADMAP.md` and `docs/architecture.md`. What follows is only
 what was superseded and why, for anyone wondering where a decision went.

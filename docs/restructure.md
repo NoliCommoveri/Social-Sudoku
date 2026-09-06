@@ -28,13 +28,22 @@ working as a redirect, so nothing breaks at the moment of the rename.
 rename the Cloudflare Worker, and the Worker rename is optional — see
 `architecture.md` §8, A4. Nothing in this phase depends on it.
 
-## Before touching anything: the tag
+## The pre-pivot tree, reachable by name
 
-**Tag the current commit first.** GitHub web UI → Releases → Draft a new release
-→ tag `v0-standalone-sudoku` on `main` → Publish.
+**Done.** The branch `v0-standalone-sudoku` points at `a4718f6`, the last commit
+of the standalone sudoku. Nothing else is needed before starting Phase 1.
 
-Thirty seconds, and it means the pre-pivot tree is permanently reachable by name
-no matter what the restructure does. Do this before the rename, not after.
+Worth being accurate about what this is for. `a4718f6` is on `main` and Phase 1
+adds commits on top rather than rewriting history, so the commit is already
+permanently reachable — this ref is a *memorable name* for it, not a rescue from
+data loss. The genuine safety net for the file move is the test suite, below.
+
+A branch rather than a tag because tag refs cannot be pushed from this
+environment. Functionally identical for keeping a commit findable. To upgrade it
+to a real tag, in the GitHub web UI: **Releases → Draft a new release → Choose a
+tag → type `v0-standalone-sudoku` → Create new tag on publish → set Target to
+the `v0-standalone-sudoku` branch → Publish release.** Then delete the branch.
+Cosmetic; the branch does the job as it stands.
 
 ## The move
 
@@ -83,7 +92,7 @@ every in-progress board on the family's phones for no benefit.
 
 Each step leaves `main` deployable. Stop at any of them.
 
-1. Tag `v0-standalone-sudoku`.
+1. ~~Mark the pre-pivot tree.~~ Done — the `v0-standalone-sudoku` branch.
 2. Rename the repo to `carson-gameroom`.
 3. One commit: `git mv` the tree, fix the four kinds of reference above.
    **Verify: 46 tests green, and the site still serves — now at `/sudoku/`.**
@@ -103,8 +112,8 @@ Steps 1 and 2 are yours in a browser. Steps 3 and 4 are one session, Small.
   edited when it should not have been — that is the review check.
 - **The deployed site.** After step 3 the sudoku loads at `/sudoku/`, deals,
   accepts input, undoes, and checks. That is a two-minute pass on the phone.
-- **The tag.** If all of the above somehow misleads, `v0-standalone-sudoku` is
-  still there.
+- **`v0-standalone-sudoku`.** If all of the above somehow misleads, the
+  pre-pivot tree is one click away.
 
 ## What Phase 1 explicitly does not do
 
