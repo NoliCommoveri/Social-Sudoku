@@ -1,5 +1,28 @@
 {
   "name": "carson-gameroom",
+  "main": "worker/index.js",
   "compatibility_date": "2026-09-03",
-  "assets": { "directory": "./public" }
+
+  // The assets binding is what lets the Worker hand a request back to public/.
+  // Assets are still matched first, so the script only runs for paths with no
+  // file behind them — /api/*, /admin, and 404s.
+  "assets": { "directory": "./public", "binding": "ASSETS" },
+
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "gameroom",
+      // The database created by setup task A2 (docs/architecture.md §8). The id
+      // is not a secret -- it names a database that only this Worker's binding
+      // can reach.
+      "database_id": "92d91667-4421-437c-a829-a37e5372e2d7"
+    }
+  ],
+
+  // What makes `import schema from './sql/001_schema.sql'` work. wrangler
+  // bundles the Worker on Cloudflare's build machine; nothing under public/ is
+  // touched by it. fallthrough keeps wrangler's own default rules in place.
+  "rules": [
+    { "type": "Text", "globs": ["**/*.sql"], "fallthrough": true }
+  ]
 }

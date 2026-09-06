@@ -16,12 +16,14 @@ A sudoku at `/sudoku/`, deployed and playable, behind a placeholder front page:
 - In-progress boards saved per size and tier in `localStorage`.
 - A one-link hub page at `public/index.html`. It is a placeholder; the designed
   shelf is Phase 2.
-- 46 tests under `test/`, run by GitHub Actions on every push.
+- 84 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
+- A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
+  and the admin page at `/admin` that applies it — `worker/`.
 
-No database, no Durable Object, no identity, no stored results. Nothing a
-player would miss has been written anywhere yet.
+No Durable Object, no identity, no stored results. Nothing a player would miss
+has been written anywhere yet.
 
 ## The five things this is for
 
@@ -60,17 +62,35 @@ move was clean.
 
 The first phase with a server in it. Delivers **H1** and **H3**.
 
-- D1 database, the migrations/seeds module, and the admin page.
-- The family passphrase gate and the two signed cookies.
-- Profiles: create, pick, change avatar, change screen name.
-- The hub landing page — the game shelf.
-- Custom domain `games.immotus.app`.
-
 Setup tasks in `docs/architecture.md` §8. A1 — deleting the Worker left orphaned
 by the rename — comes before the rest of them and before any binding exists.
 
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
-sibling, both rewritten for D1. Medium, likely two sessions.
+sibling, both rewritten for D1. Three sessions, because the erase/export sibling
+and the avatar set are each a piece of work rather than a detail of one.
+
+**Session A — database and admin.** Medium, ~50k. ✅ Built. `wrangler.jsonc`
+gains `main`, the D1 binding and the `Text` rule for `**/*.sql`.
+`worker/index.js` routes `/admin` and `/api/*` and lets everything else fall
+through to assets. `worker/db/plan.js` is the pure half — quote-aware splitter,
+checksums, applied/pending/drifted — and is the only part CI can reach, because
+`node --test` cannot import a `.sql` file. `worker/db/migrations.js` is the only
+module that imports SQL and holds no logic. `001_schema.sql` carries `players`,
+`plays` and `play_results`; `seed_players.sql` carries placeholders. The admin
+page renders before login and before any table exists, and puts the failing
+statement and its error on the page. **A2** is done; the database is empty until
+**S6** applies the schema from `/admin`.
+
+**Session B — erase, export, re-import.** Small–Medium, ~30k. The third button,
+JSON export wired into the erase confirmation itself, and re-import. Separable
+from A, and must land before Phase 3 — the first phase writing a row anyone
+would miss.
+
+**Session C — gate, profiles, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
+signing, the `gate` and `who` cookies, `/api/players`, the picker, the avatar
+set, `public/shared/theme.css`, the shelf. Blocked on **A3**; **A4** follows it.
+This one sits at the top of its band and splits at the theme/shelf boundary if
+the avatar SVGs run long.
 
 ### Phase 3 — The record
 
@@ -138,9 +158,10 @@ not exist at all until Phase 2.
 
 ## Open items
 
-`docs/sudoku/specs/questions.md` holds the sudoku ones. Open: **S2**, **S4**
+`docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
-close. They are about the board, which nothing since has touched.
+close, all about the board, which nothing since has touched — and **S6**, the
+database and admin page, which can be checked nowhere but a deployment.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

@@ -38,8 +38,14 @@ for isolation that six players do not need.
 - **Static assets** — `public/` is the assets directory. A request whose path
   matches a file gets the file, with no Worker invocation and no charge.
 - **`/api/*`** — no file matches, so it falls through to the Worker script.
-  Identity, profiles, stats reads, admin actions.
+  Identity, profiles, stats reads.
+- **`/admin`** — the database page (§3.2). Not under `/api/` because it is a
+  page rather than an endpoint, and outside the passphrase gate because it has
+  to render before a passphrase exists and while the database that would hold
+  one is empty.
 - **`/api/room/*` upgrade** — routed to a `GameRoom` stub by room code.
+- **Everything else** — handed back to `public/` through the `ASSETS` binding,
+  which answers with the file if there is one and a 404 if there is not.
 
 Deployment is unchanged from today: push to `main`, Cloudflare's GitHub
 integration builds and runs `wrangler deploy` on its own build machine. Nobody
@@ -132,8 +138,33 @@ matters more than it did: **the JSON export is a hard precondition for erase**,
 because from Phase 3 the database holds the only copy of the play record and
 that cannot be regenerated. Wire export into the erase confirmation itself.
 
-The admin page renders before login and before any table exists, and shows the
-failing statement and its error on the page. There is no other way to see it.
+The admin page is at `/admin`. It renders before login and before any table
+exists, and shows the failing statement and its error on the page. There is no
+other way to see it.
+
+Naming which statement failed and keeping the migration atomic pull against each
+other: D1 reports the SQLite error without saying which statement produced it,
+and running statements one at a time to find out would half-apply the file. The
+resolution is a rule — **every statement in a migration is idempotent**, so
+after the batch has failed and rolled back whole, the statements can be re-run
+one at a time to find the broken one and nothing is left behind. That rule also
+forbids an `ALTER` chain, which clear-and-rebuild already did.
+`test/sql-files.test.js` asserts both.
+
+The modules:
+
+```
+worker/index.js          routing
+worker/admin.js          the page and its two posts
+worker/db/plan.js        pure: splitter, checksums, applied/pending/drifted
+worker/db/migrations.js  the only module that imports .sql; no logic
+worker/db/apply.js       everything that touches D1
+worker/db/sql/           001_schema.sql, seed_players.sql
+```
+
+`plan.js` is split from `migrations.js` because `node --test` cannot import a
+`.sql` file. Everything with a decision in it takes strings as arguments and is
+tested; the module that turns files into strings holds nothing worth testing.
 
 **Creating the database is a dashboard action.** D1 → Create database →
 `gameroom`. Copy the id into `wrangler.jsonc` in the GitHub web editor. That is
@@ -219,8 +250,9 @@ Dashboard actions, in order. None has a CLI step.
   nothing. After A2–A4 it would hold the D1 binding, the Durable Object
   namespace and the domain, none of which follow to the new Worker.
 
-- **A2 — Create the D1 database.** D1 → Create → `gameroom`. Paste the id into
-  `wrangler.jsonc`. *Phase 2.*
+- **A2 — Create the D1 database ✅ done.** `gameroom`, its id in
+  `wrangler.jsonc`. The database exists and is empty; **S6** is applying the
+  schema to it from `/admin`, which happens after this branch is on `main`.
 - **A3 — Set two secrets.** Worker → Settings → Variables and Secrets →
   Encrypted. `FAMILY_PASSPHRASE` and `SESSION_SECRET` (any long random string).
   *Phase 2.*

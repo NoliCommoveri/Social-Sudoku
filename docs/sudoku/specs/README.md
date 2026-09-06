@@ -40,8 +40,9 @@ All open items live in [`questions.md`](questions.md): `S`* (a setup task only
 you can do, in a browser), `D`* (a due out — needs information I do not have),
 and `Q`* (an open question where I have a recommendation and will build it
 unless you say otherwise). Slice files reference those IDs rather than restating
-them. One due out is open: `D1`, the family code and the players' names, which
-slice 7 seeds. It does not block that slice.
+them. `D1` has moved: the family code is gone with the per-family Durable
+Object, and the passphrase and screen names are the hub's, tracked in
+`../../identity-and-stats.md` §5.
 
 **Anything a slice cannot verify on its own is an `S`* item, not a line in that
 slice's acceptance criteria.** Timing on the phone, a touch layout, a
@@ -50,7 +51,9 @@ and a criterion nobody owns is a criterion that gets assumed. S1 connected the
 repo to Cloudflare and is done; S2 is slice 1's four device checks; S4 is slice
 2's two; S5 is slice 3's, and it is the one that decides whether the easy tier
 is easy enough. **S2, S4 and S5 are all still open**; they are about the board,
-which nothing since has touched. Slice 6's library legibility on the phone
+which nothing since has touched. **S6 is the hub's first**, and the only one in
+the file that is not about sudoku: Phase 2's database and admin page can be
+checked nowhere but a deployment. Slice 6's library legibility on the phone
 needs the same treatment when it starts, and the hub's own checks are in
 `../../design-language.md` §5.
 
@@ -63,9 +66,9 @@ from taste, so changing one is a project-level decision, not a slice-level one.
   No bundler, no transpile, no TypeScript, no npm dependency at runtime. This is
   a consequence of "no CLI": anything requiring `npm run build` before the site
   works cannot be driven from the GitHub web editor. It is a rule about
-  `public/`. The Worker script added in slice 7 is bundled by `wrangler` on
+  `public/`. The Worker script under `worker/` is bundled by `wrangler` on
   Cloudflare's build machine, is never served, and does not relax this for a
-  single client file — `slice-07-storage-foundation.md` §2 draws the line.
+  single client file — `../../architecture.md` §2.1 draws the line.
 - **No runtime dependencies.** Zero. Everything in `public/sudoku/` is written
   here.
 - **Pure core.** `public/sudoku/core/` never touches the DOM, `window`, or
