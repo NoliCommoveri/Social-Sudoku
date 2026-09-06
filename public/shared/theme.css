@@ -1,0 +1,169 @@
+/*
+  The shell's tokens, defined once and used by every screen the hub renders:
+  the gate, the picker, the shelf, and whatever Phase 3 adds. A game may add
+  its own colours; it may not redefine what is here.
+  docs/design-language.md §4.
+
+  Dark is the ground, light is the override. That order is deliberate: the site
+  reads as a game rather than a document, it is kinder on a phone at night, and
+  the Chromebook and the phones will not agree about which they are in anyway.
+
+  Two rules worth knowing before adding to this file:
+
+  - **64px is the floor for anything tappable on the hub**, with 8px between.
+    Bigger than the 44px accessibility floor because the 4-year-old is the
+    constraint and a mis-tap starts the wrong game. The sudoku board is exempt
+    and always will be.
+  - **16px is the smallest type in the shell.** There is no "fine print" tier
+    here, because everyone who can read is reading on a 360px phone.
+*/
+
+:root {
+  color-scheme: dark;
+
+  --ground: #12161d;
+  --panel: #1b212b;
+  --panel-high: #232b38;
+  --edge: #333c4a;
+
+  --ink: #eef2f8;
+  --ink-soft: #9aa6b8;
+
+  /* The shell's own accent. A game tile carries its own on top of this. */
+  --accent: #ffb02e;
+  --accent-ink: #2a1c00;
+
+  --good: #6bd39a;
+  --stop: #ff6b6b;
+
+  --font: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --step-0: 1rem;      /* 16px, the floor */
+  --step-1: 1.125rem;
+  --step-2: 1.375rem;
+  --step-3: 1.75rem;
+  --step-4: 2.25rem;
+
+  --radius: 0.75rem;
+  --radius-lg: 1.25rem;
+  --radius-round: 999px;
+
+  --gap: 0.5rem;
+  --pad: 1rem;
+
+  /* The touch floor, referenced rather than repeated. */
+  --tap: 64px;
+
+  --lift: 0 2px 0 rgb(0 0 0 / 0.35), 0 8px 20px rgb(0 0 0 / 0.28);
+  --lift-high: 0 3px 0 rgb(0 0 0 / 0.35), 0 14px 30px rgb(0 0 0 / 0.34);
+
+  --motion: 220ms cubic-bezier(0.2, 0.7, 0.3, 1);
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+
+    --ground: #f2f4f8;
+    --panel: #ffffff;
+    --panel-high: #ffffff;
+    --edge: #d3dae4;
+
+    --ink: #171b22;
+    --ink-soft: #5b6675;
+
+    --accent: #f59300;
+    --accent-ink: #ffffff;
+
+    --lift: 0 1px 0 rgb(16 24 40 / 0.06), 0 6px 16px rgb(16 24 40 / 0.10);
+    --lift-high: 0 2px 0 rgb(16 24 40 / 0.06), 0 12px 26px rgb(16 24 40 / 0.14);
+  }
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  font: var(--step-0) / 1.45 var(--font);
+  color: var(--ink);
+  background: var(--ground);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Every tap does something visible, and nothing is smaller than a thumb. */
+button,
+.tap {
+  min-height: var(--tap);
+  font: inherit;
+  color: inherit;
+  cursor: pointer;
+}
+
+:where(button, a, [tabindex]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+}
+
+/* The one button shape the shell uses: the gate's, the picker's, the shelf's. */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  min-height: var(--tap);
+  padding: 0 1.5rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel-high);
+  color: var(--ink);
+  font-size: var(--step-1);
+  font-weight: 700;
+  text-decoration: none;
+  box-shadow: var(--lift);
+  transition: transform var(--motion), box-shadow var(--motion);
+
+  &:active {
+    transform: translateY(2px);
+    box-shadow: none;
+  }
+}
+
+.btn-accent {
+  background: var(--accent);
+  border-color: transparent;
+  color: var(--accent-ink);
+}
+
+/* An avatar always sits on its own disc, which is what makes one glyph legible
+   on any background and at any size. Set --disc to size it. */
+.disc {
+  display: grid;
+  place-items: center;
+  inline-size: var(--disc, 64px);
+  block-size: var(--disc, 64px);
+  border-radius: var(--radius-round);
+  background: color-mix(in srgb, currentColor 18%, var(--panel));
+  overflow: hidden;
+
+  & > svg {
+    inline-size: 82%;
+    block-size: 82%;
+  }
+}
+
+/* Motion is short and purposeful, and nothing is behind an animation you have
+   to wait out — so removing it removes nothing. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 1ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 1ms !important;
+  }
+}

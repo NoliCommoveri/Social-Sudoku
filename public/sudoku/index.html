@@ -25,6 +25,20 @@
     background: #fff;
   }
 
+  /* One tap back to the shelf. A game the 5-year-old cannot get out of is a
+     game they stop opening (docs/design-language.md §2). */
+  .back {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    min-height: 48px;
+    padding: 0 8px;
+    margin: 2px 0 0 -8px;
+    color: var(--ink-soft);
+    font-weight: 600;
+    text-decoration: none;
+  }
+
   #app {
     container-type: inline-size;
     max-width: 1100px;
@@ -119,6 +133,7 @@
 </head>
 <body>
 <main id="app">
+  <a class="back" href="/">&larr; Gameroom</a>
   <h1>Sudoku</h1>
   <div class="layout">
     <div class="board-wrap"><div id="board"></div></div>
