@@ -30,7 +30,7 @@ hard a clue set is, so nothing here returns a rating.
 ## 2. Files
 
 ```
-public/src/core/
+public/sudoku/core/
   solver.js        initState, applyStep, solveLogically
   techniques.js    the four technique functions
   fixtures.js      hand-built technique examples (see §6)
@@ -137,11 +137,11 @@ no 81 cells to demonstrate.
 2. All five test groups above exist and pass.
 3. The four technique functions are called by nothing outside their own tests —
    there is no caller until slice 6, and that is correct.
-4. `public/src/core/` still imports nothing outside itself, and
+4. `public/sudoku/core/` still imports nothing outside itself, and
    `no-hardcoded-sizes.test.js` passes with its one exemption (`UNIT_KINDS`).
    `fixtures.js` obeys that grep like every other file in `core/`, which means
    its boards are written as strings rather than as arrays of digits.
-5. Nothing in `public/src/ui/` changed.
+5. Nothing in `public/sudoku/ui/` changed.
 
 Criterion 5 is the one that keeps this slice the size it is. If a UI file needed
 touching, the split was drawn wrong and it is worth saying so before continuing.

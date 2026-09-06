@@ -59,8 +59,8 @@ bent by it:
   repo, and it is never served.
 
 The boundary that keeps that true: nothing under `public/` imports from
-`src/worker/` or `src/db/`, and nothing in those imports from `public/src/ui/`.
-`public/src/core/` is importable by both, and slice 10 will need it to be.
+`src/worker/` or `src/db/`, and nothing in those imports from `public/sudoku/ui/`.
+`public/sudoku/core/` is importable by both, and slice 10 will need it to be.
 
 ## 3. Files
 
@@ -210,7 +210,7 @@ CREATE INDEX IF NOT EXISTS results_best
   changing the schema. Slice 6 produces `hints` and `hints_applied`; Q3 produces
   `checks`.
 - **`size_key` is data, not a dimension.** `no-hardcoded-sizes.test.js` reads
-  `public/src/core/` and does not read `.sql`, nor should it: the `4 | 6 | 9`
+  `public/sudoku/core/` and does not read `.sql`, nor should it: the `4 | 6 | 9`
   comment documents an enum stored in a column. Written here once so nobody
   later "fixes" it.
 - **The ledger is created by the file it records.** Applying `001` runs the DDL

@@ -49,10 +49,10 @@ keyboard-only run, a deployed URL — none of those can be closed by CI or by me
 and a criterion nobody owns is a criterion that gets assumed. S1 connected the
 repo to Cloudflare and is done; S2 is slice 1's four device checks; S4 is slice
 2's two; S5 is slice 3's, and it is the one that decides whether the easy tier
-is easy enough. **S2, S4 and S5 are all still open**, and the restructure does
-not touch the board, so they carry forward unchanged. Slice 6's library
-legibility on the phone needs the same treatment when it starts, and the hub's
-own checks are in `../../design-language.md` §5.
+is easy enough. **S2, S4 and S5 are all still open**; they are about the board,
+which nothing since has touched. Slice 6's library legibility on the phone
+needs the same treatment when it starts, and the hub's own checks are in
+`../../design-language.md` §5.
 
 ## Conventions these specs assume
 
@@ -66,10 +66,11 @@ from taste, so changing one is a project-level decision, not a slice-level one.
   `public/`. The Worker script added in slice 7 is bundled by `wrangler` on
   Cloudflare's build machine, is never served, and does not relax this for a
   single client file — `slice-07-storage-foundation.md` §2 draws the line.
-- **No runtime dependencies.** Zero. Everything in `public/src/` is written here.
-- **Pure core.** `public/src/core/` never touches the DOM, `window`, or storage. It is
-  importable by both the browser and the CI test runner, which is what lets the
-  same tests cover both.
+- **No runtime dependencies.** Zero. Everything in `public/sudoku/` is written
+  here.
+- **Pure core.** `public/sudoku/core/` never touches the DOM, `window`, or
+  storage. It is importable by both the browser and the CI test runner, which
+  is what lets the same tests cover both.
 - **Size-parameterized from line one.** No module outside `sizes.js` may contain
   a literal `4`, `6`, `9`, `16`, `36`, or `81`. Enforced by a test that greps the
   core sources. `3` is banned too, but with a short exemption list for the
@@ -78,8 +79,8 @@ from taste, so changing one is a project-level decision, not a slice-level one.
   deliberate edit. `2` is not banned; it is unusable as a signal.
   `slice-01-grid-generator-solo.md` §6 has the rule in full.
 - **Everything served lives under `public/`.** That directory is the Worker's
-  assets directory; the repo's docs and tests are not published. From hub Phase
-  1, sudoku's share of it is `public/sudoku/` (`../../restructure.md`).
+  assets directory; the repo's docs and tests are not published. Sudoku's share
+  of it is `public/sudoku/`.
 - **Chrome only, current.** The players are on Android phones and a Chromebook.
   ES modules, CSS grid, container queries, `:has()`, and CSS nesting are used
   without fallbacks. The 360px-wide phone in portrait is the binding layout

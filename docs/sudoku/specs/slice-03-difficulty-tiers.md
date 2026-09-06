@@ -118,7 +118,7 @@ fails validation and is dropped rather than restored under a guess.
 
 1. `node --test` passes; the workflow is green.
 2. All seven test groups above exist and pass.
-3. `public/src/core/` still imports nothing outside itself, and
+3. `public/sudoku/core/` still imports nothing outside itself, and
    `no-hardcoded-sizes.test.js` passes with its one exemption (`UNIT_KINDS`).
 4. The three difficulties are visibly different on a phone — a check only a
    person can make, so it is `S5` in `questions.md`, not a line here.

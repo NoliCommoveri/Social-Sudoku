@@ -1,0 +1,143 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Sudoku</title>
+<!-- Inert until slice 10 replaces it with the real icons (Q9). Without it
+     every load logs a 404, which is noise when debugging on the phone. -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="./ui/board.css">
+<style>
+  :root {
+    color-scheme: light;
+    --ink-soft: #5b6470;
+    --key: #f2f4f7;
+    --key-edge: #cfd5dd;
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    font-family: system-ui, sans-serif;
+    color: var(--ink);
+    background: #fff;
+  }
+
+  #app {
+    container-type: inline-size;
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 8px;
+
+    & h1 {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin: 4px 2px 10px;
+      letter-spacing: 0.01em;
+    }
+  }
+
+  .layout {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    align-items: start;
+  }
+
+  .board-wrap {
+    container-type: inline-size;
+    width: 100%;
+  }
+
+  .side {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+
+  #status {
+    margin: 0;
+    min-height: 1.4em;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  /* A keypad: the digits in a boxW-wide block, erase/undo/redo down the column
+     beside them, new game across the bottom. Every cell is placed by app.js
+     from the geometry, so 4x4 and 6x6 get the same shape with fewer columns. */
+  #pad {
+    display: grid;
+    grid-template-columns: repeat(var(--pad-cols), 1fr);
+    gap: 6px;
+  }
+
+  /* Two rows of choices, both filled by app.js: dimensions from SIZE_KEYS,
+     difficulties from TIER_IDS. Same shape, because they are the same kind of
+     choice — one board out of a short list. */
+  #sizes, #tiers {
+    display: flex;
+    gap: 6px;
+
+    & .pick { flex: 1; font-size: 1rem; }
+    & .pick[aria-pressed='true'] {
+      background: var(--sel);
+      border-color: var(--entered);
+      color: var(--entered);
+      font-weight: 600;
+    }
+  }
+
+  .pad-key {
+    font: inherit;
+    font-size: 1.25rem;
+    padding: 10px 0;
+    min-height: 48px;
+    border: 1px solid var(--key-edge);
+    border-radius: 8px;
+    background: var(--key);
+    color: var(--ink);
+    cursor: pointer;
+
+    &.control { font-size: 0.95rem; }
+    &:active { background: var(--sel); }
+    &:disabled { color: var(--line); cursor: default; }
+  }
+
+  /* Wide: the pad sits beside the board. Narrow: beneath it — there is no
+     room, and scrolling a sudoku board is worse than a small number pad.
+     This block comes last so it wins on source order against the base rules
+     it overrides. */
+  @container (min-width: 560px) {
+    .layout { flex-direction: row; }
+    .board-wrap { max-width: min(62%, 72vh); }
+    .side { max-width: 340px; }
+  }
+</style>
+</head>
+<body>
+<main id="app">
+  <h1>Sudoku</h1>
+  <div class="layout">
+    <div class="board-wrap"><div id="board"></div></div>
+    <div class="side">
+      <div id="sizes" role="group" aria-label="Grid size"></div>
+      <div id="tiers" role="group" aria-label="Difficulty"></div>
+      <p id="status" role="status" aria-live="polite"></p>
+      <!-- app.js inserts the digit keys ahead of these and places every key
+           on the grid; the markup order is the tab order. -->
+      <div id="pad">
+        <button type="button" class="pad-key control" id="erase">Erase</button>
+        <button type="button" class="pad-key control" id="undo">Undo</button>
+        <button type="button" class="pad-key control" id="redo">Redo</button>
+        <button type="button" class="pad-key control" id="check">Check</button>
+        <button type="button" class="pad-key control" id="new-game">New game</button>
+      </div>
+    </div>
+  </div>
+</main>
+<script type="module" src="./ui/app.js"></script>
+</body>
+</html>

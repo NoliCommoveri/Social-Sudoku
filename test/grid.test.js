@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SIZES } from '../public/src/core/sizes.js';
-import { makeGeometry, UNIT_KINDS } from '../public/src/core/grid.js';
+import { SIZES } from '../public/sudoku/core/sizes.js';
+import { makeGeometry, UNIT_KINDS } from '../public/sudoku/core/grid.js';
 
 const allSizes = Object.values(SIZES);
 

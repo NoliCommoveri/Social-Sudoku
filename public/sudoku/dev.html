@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Sudoku — dev</title>
 <link rel="icon" href="data:,">
-<link rel="stylesheet" href="./src/ui/board.css">
+<link rel="stylesheet" href="./ui/board.css">
 <style>
   :root { color-scheme: light; --key: #f2f4f7; --key-edge: #cfd5dd; }
   * { box-sizing: border-box; }
@@ -51,10 +51,10 @@ sees it &mdash; how much of the board is already filled in.</p>
 <script type="module">
 import {
   SIZES, SIZE_KEYS, DEFAULT_SIZE_KEY, TIER_IDS, TIER_LABELS, tierFor,
-} from './src/core/sizes.js';
-import { makeGeometry } from './src/core/grid.js';
-import { deal, countSolutions } from './src/core/generator.js';
-import { createBoard } from './src/ui/board.js';
+} from './core/sizes.js';
+import { makeGeometry } from './core/grid.js';
+import { deal, countSolutions } from './core/generator.js';
+import { createBoard } from './ui/board.js';
 
 const DEALS = 100;
 const TARGET_MS = 250;

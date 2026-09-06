@@ -1,10 +1,10 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 
-import { SIZES, SIZE_KEYS, TIER_IDS, tierFor } from '../public/src/core/sizes.js';
-import { makeGeometry } from '../public/src/core/grid.js';
-import { mulberry32 } from '../public/src/core/rng.js';
-import { fillComplete, countSolutions, carve, deal } from '../public/src/core/generator.js';
+import { SIZES, SIZE_KEYS, TIER_IDS, tierFor } from '../public/sudoku/core/sizes.js';
+import { makeGeometry } from '../public/sudoku/core/grid.js';
+import { mulberry32 } from '../public/sudoku/core/rng.js';
+import { fillComplete, countSolutions, carve, deal } from '../public/sudoku/core/generator.js';
 
 const allSizes = Object.values(SIZES);
 const FILL_SEEDS = 200;

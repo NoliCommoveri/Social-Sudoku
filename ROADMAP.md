@@ -8,19 +8,20 @@ people who know each other, not for the public internet.
 
 ## What exists today
 
-A standalone sudoku, deployed and playable:
+A sudoku at `/sudoku/`, deployed and playable, behind a placeholder front page:
 
 - Grid model, seeded generator, and clue-count difficulty tiers at 4×4, 6×6 and
-  9×9 — `public/src/core/`, about 600 lines, zero dependencies.
-- Solo play with undo, redo, and a check button — `public/src/ui/`.
+  9×9 — `public/sudoku/core/`, about 600 lines, zero dependencies.
+- Solo play with undo, redo, and a check button — `public/sudoku/ui/`.
 - In-progress boards saved per size and tier in `localStorage`.
+- A one-link hub page at `public/index.html`. It is a placeholder; the designed
+  shelf is Phase 2.
 - 46 tests under `test/`, run by GitHub Actions on every push.
 - A Worker serving `public/` at a `.workers.dev` URL, built by Cloudflare's
   GitHub integration on push to `main`.
 
-No database, no Durable Object, no identity, no stored results. Nothing that a
-player would miss has been written anywhere yet, which is what makes the
-restructure below cheap.
+No database, no Durable Object, no identity, no stored results. Nothing a
+player would miss has been written anywhere yet.
 
 ## The five things this is for
 
@@ -45,17 +46,15 @@ Each phase leaves `main` deployed and playable. No phase depends on a later one.
 
 ### Phase 0 — Regroup ✅
 
-This document, `docs/architecture.md`, `docs/restructure.md`,
-`docs/identity-and-stats.md`, `docs/design-language.md`. Design docs nested
-under `docs/`. No code moved.
+This document, `docs/architecture.md`, `docs/identity-and-stats.md`,
+`docs/design-language.md`. Design docs nested under `docs/`. No code moved.
 
-### Phase 1 — Restructure
+### Phase 1 — Restructure ✅
 
-Move the sudoku code into the hub layout. No new features, no new behaviour,
-no new bindings. `public/src/core/` → `public/sudoku/core/`, and so on. The 46
-tests are the proof the move was clean.
-
-Full plan in [`docs/restructure.md`](docs/restructure.md). Small.
+The sudoku moved into the hub layout — `public/src/` → `public/sudoku/` —
+behind a placeholder front page linking to it. No features, no behaviour
+change, no bindings. The 46 tests passing on the moved tree are the proof the
+move was clean.
 
 ### Phase 2 — The hub: door, profiles, database
 
@@ -84,8 +83,7 @@ Absorbs the old slice 9. Medium.
 ### Phase 4 — Finish sudoku
 
 Pencil marks, the reduced logical solver, the technique library and hint
-button. Three existing specs, unchanged by the pivot — they are pure client
-work with no server in them.
+button. Three existing specs, all pure client work with no server in them.
 
 `docs/sudoku/specs/slice-04` (unwritten), `slice-05-solver.md`,
 `slice-06-technique-library-hints.md`. Small, Small–Medium, Medium.
@@ -138,31 +136,11 @@ to show them; a half-built trading game is not.
 genuinely wanted, but they improve a game that is already playable. The hub does
 not exist at all until Phase 2.
 
-## What the pivot did not cost
-
-Named because the obvious fear is that a redesign throws work away.
-
-- **All 600 lines of sudoku core survive unedited.** Pure functions, no DOM, no
-  storage, no imports outside `core/`. They move directories and nothing else.
-- **The UI survives.** It gets re-parented under `/sudoku/` and later gains a
-  hub header. No rewrite.
-- **The tests survive.** Import paths change; assertions do not.
-- **Three slice specs survive verbatim** — pencil marks, solver, technique
-  library. None of them has a server in it.
-- **`localStorage` survives** as the in-progress-board store. It was already
-  forbidden from holding results, which is exactly why the hub's database
-  arrives with no migration to perform.
-
-One spec is superseded: `slice-07-storage-foundation.md`, which built the
-storage layer on DO SQLite. Its migrations-and-admin machinery carries over
-almost whole; only its target changes. See `docs/architecture.md` §3.
-
 ## Open items
 
-`docs/sudoku/specs/questions.md` holds the sudoku ones. Still open and still
-relevant after the pivot: **S2**, **S4** and **S5** — the device checks on the
-phone and Chromebook that no test can close. They are about the board, which
-this restructure does not touch, so they carry forward unchanged.
+`docs/sudoku/specs/questions.md` holds the sudoku ones. Open: **S2**, **S4**
+and **S5** — the device checks on the phone and Chromebook that no test can
+close. They are about the board, which nothing since has touched.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

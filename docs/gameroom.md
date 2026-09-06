@@ -89,11 +89,11 @@ reads. Do not build cooperative mode because this document mentions it;
 
 ## 2. Repo layout
 
-**Superseded.** The repo is not migrated — it is renamed and restructured in
-place, preserving history and the working Cloudflare build connection. The
-layout and the reasoning are in `restructure.md`; the no-bundler consequence
-(there is no base path to set, and therefore no white-screen failure mode) is in
-`architecture.md` §2.1.
+**Superseded.** The repo was not migrated — it was renamed and restructured in
+place, preserving history and the working Cloudflare build connection. One
+directory per game under `public/`; sudoku's is `public/sudoku/`. The
+no-bundler consequence (there is no base path to set, and therefore no
+white-screen failure mode) is in `architecture.md` §2.1.
 
 ---
 
