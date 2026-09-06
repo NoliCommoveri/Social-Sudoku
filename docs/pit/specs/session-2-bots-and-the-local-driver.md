@@ -272,11 +272,14 @@ final state.
 ordered `easy > normal > hard`. That `botDelay` cannot see the board is carried
 by its signature, not by a test.
 
-**A session end to end.** One human seat that only ever presses `harvest` and
-`ready`, three bots, a fake clock stepped at `tickIntervalMs`, played until
-`isComplete` returns an outcome. The bound on ticks is generous and the point of
-it is not the number: a session that does not finish means bots that do not
-trade, and this is the only test that would notice.
+**A session end to end.** One human seat, three bots, a fake clock stepped at
+`tickIntervalMs`, played until the view reports `over`. The human presses
+`harvest` on its own corner and `ready` through the reveal, and takes a trade
+now and then — a seat that never trades freezes nine cards where they sit, and
+most four-seat deals are then unwinnable by anybody, which is `../design.md`
+§2.6 and not a property of the bots. The bound on ticks is generous and the
+point of it is not the number: a session that does not finish means bots that do
+not trade, and this is the only test that would notice.
 
 **Conservation through the boundary.** After every push, summing `seats[].cards`
 across the view and adding every live offer's `count` gives *C* × `HAND`. That

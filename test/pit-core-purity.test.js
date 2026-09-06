@@ -1,7 +1,8 @@
-// Mechanical defence of the two rules Pit's core has to hold: the numbers the
-// game is sized by live in one module (criterion 6), and the core is pure
-// (criterion 5). Both are the kind of rule that is true when it is written and
-// quietly false a session later, so neither is left to review.
+// Mechanical defence of the rules Pit's tree has to hold and a reviewer would
+// have to notice: the numbers the game is sized by live in one module, the core
+// is pure, a bot cannot reach the rules module, and neither can a client. Every
+// one of them is the kind of rule that is true when it is written and quietly
+// false a session later, so none of them is left to review.
 //
 // The source scanner below is a copy of the one in no-hardcoded-sizes.test.js
 // rather than a promotion of it into a shared helper. Promoting means editing
@@ -149,5 +150,38 @@ test('core/ touches no DOM, no storage, no clock and no unseeded randomness', ()
 });
 
 test('every core file is covered by this scan', () => {
-  assert.deepEqual(coreFiles, ['commodities.js', 'rng.js', 'rules.js']);
+  assert.deepEqual(coreFiles, ['bot.js', 'commodities.js', 'rng.js', 'rules.js']);
+});
+
+/** Every import specifier in a file, comments and strings already discounted. */
+function importsOf(rel) {
+  const raw = read(rel);
+  const code = blankCommentsAndStrings(raw);
+  const out = [];
+  for (const match of raw.matchAll(STATIC_IMPORT)) {
+    if (code.slice(match.index, match.index + 'import'.length) !== 'import') continue;
+    out.push(match[1]);
+  }
+  return out;
+}
+
+// A bot reaches a view and nothing else. `botAction` takes a View, and this is
+// what makes "it cannot be handed a State" mechanical: there is no import in
+// the file that could produce one.
+test('core/bot.js cannot reach the rules module', () => {
+  assert.deepEqual(importsOf('core/bot.js'), ['./commodities.js']);
+});
+
+// The client renders a view and sends actions. Session 3's files do not exist
+// yet; the rule is written now so that it is enforced the moment they do.
+test('nothing outside core/ and room/ imports the rules module', () => {
+  const offences = [];
+  for (const rel of sources()) {
+    const area = rel.includes('/') ? rel.slice(0, rel.indexOf('/')) : '';
+    if (area === 'core' || area === 'room') continue;
+    for (const specifier of importsOf(rel)) {
+      if (/(^|\/)core\/rules\.js$/.test(specifier)) offences.push(`${rel} imports "${specifier}"`);
+    }
+  }
+  assert.deepEqual(offences, [], `the rules module reached from a client file:\n${offences.join('\n')}`);
 });
