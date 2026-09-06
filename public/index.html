@@ -74,13 +74,15 @@
     gap: 6px;
   }
 
-  /* One row of dimensions, filled by app.js from SIZE_KEYS. */
-  #sizes {
+  /* Two rows of choices, both filled by app.js: dimensions from SIZE_KEYS,
+     difficulties from TIER_IDS. Same shape, because they are the same kind of
+     choice — one board out of a short list. */
+  #sizes, #tiers {
     display: flex;
     gap: 6px;
 
-    & .size { flex: 1; font-size: 1rem; }
-    & .size[aria-pressed='true'] {
+    & .pick { flex: 1; font-size: 1rem; }
+    & .pick[aria-pressed='true'] {
       background: var(--sel);
       border-color: var(--entered);
       color: var(--entered);
@@ -122,6 +124,7 @@
     <div class="board-wrap"><div id="board"></div></div>
     <div class="side">
       <div id="sizes" role="group" aria-label="Grid size"></div>
+      <div id="tiers" role="group" aria-label="Difficulty"></div>
       <p id="status" role="status" aria-live="polite"></p>
       <!-- app.js inserts the digit keys ahead of these and places every key
            on the grid; the markup order is the tab order. -->

@@ -1,14 +1,14 @@
-# Slice 5 — Technique library and hints
+# Slice 6 — Technique library and hints
 
-Corresponds to `sudoku-design.md` §6 step 5, implementing §4.7 and the hint
+Corresponds to `sudoku-design.md` §6 step 6, implementing §4.7 and the hint
 button. The last slice with no server in it.
 
 **Estimated cost:** Medium (20–60k). Most of it is content and CSS; the only
 logic is the reveal state machine and one precondition check.
 
-**Blocked on:** slice 4 — the library is linked from the difficulty picker's
-technique names, and a hint on a tier-2 board is meaningless without pencil
-marks to have been reasoning in.
+**Blocked on:** slice 5, which is where the four technique functions and the
+fixtures this renders are built. Slice 4 too, in practice: a hint that names a
+naked pair is hard to act on without pencil marks to have been reasoning in.
 
 **Closes `sudoku-design.md` §7.3.** The "what technique applies here?" bridge is
 this slice's level-1 reveal (§5). It is listed there as an optional later
@@ -50,7 +50,7 @@ test/
 
 **A second HTML file rather than a route.** There is no router and this slice is
 not the place to introduce one. Two pages, both reached by relative links, keeps
-the served file set enumerable — slice 10's service worker precaches an explicit
+the served file set enumerable — slice 11's service worker precaches an explicit
 list and slice 1 §2 made that a standing rule. A router is worth writing when
 there are five pages.
 
@@ -61,7 +61,7 @@ render(geom, { values, givens, highlight, readOnly })
 ```
 
 `highlight` carries three roles, and they are the three parts of a `Step`
-(slice 3 §4):
+(slice 5 §4):
 
 | Role | From a `Step` | Means |
 |---|---|---|
@@ -86,10 +86,10 @@ sunlight.
 ## 4. The library
 
 Content is `fixtures.js`, written in the `{ id, name, gridSize, cells,
-highlight, caption }` shape since slice 3 §6 precisely so this slice has nothing
+highlight, caption }` shape since slice 5 §5 precisely so this slice has nothing
 to convert.
 
-- Entries gain one field, `role: 'example' | 'counterexample'`. Slice 3 built
+- Entries gain one field, `role: 'example' | 'counterexample'`. Slice 5 built
   both kinds for its isolation tests; the library renders the examples.
   Counterexamples stay test-only until someone writes a caption aimed at a
   reader rather than at an assertion — at which point it is a flag and a
@@ -136,10 +136,11 @@ which is weaker: it catches a cell with no candidates and misses a wrong digit
 that merely makes the puzzle unsolvable.
 
 **On a board that agrees with the solution, a hint always exists.** Correct
-entries are added givens, and slice 3 §5's monotonicity says adding a given
-never removes a deduction. So the puzzle stays solvable at its tier and
-something fires until the board is full. "Nothing applies" is therefore always
-either a finished board or a mistake — never a shrug.
+entries are added givens, and the solver is a non-branching eliminator, so a
+deduction available before an entry is still available after it (slice 5 §3).
+Every dealt puzzle is solvable by singles alone (slice 3 §3), so something fires
+until the board is full. "Nothing applies" is therefore always either a finished
+board or a mistake — never a shrug.
 
 ### `firstStep`
 
@@ -176,18 +177,20 @@ Two counters, not one: `hints` increments once per hint at level 1, and
 Counting per press would charge a curious child three times for reading the
 library entry, which is the behaviour this whole slice is trying to produce.
 Counting only on apply would make naming and locating free, which they are not.
-Whether either counter disqualifies a best time is slice 8's decision — it owns
+Whether either counter disqualifies a best time is slice 9's decision — it owns
 best times, Q3's check counter lands in the same place, and this slice's job is
 to make sure the numbers exist and are honest when it gets there.
 
-## 6. Linking the picker
+## 6. Reaching the library
 
-Slice 4 put technique names on the difficulty buttons; this slice makes them
-links to `library.html#<technique>`.
+The difficulty buttons say Easy, Medium and Hard and nothing else (slice 3 §5) —
+difficulty is clue count, so there is no technique name on them to hang a link
+from. The library gets its own entry point instead: one link beside the picker,
+and one from each hint.
 
-The link is on the technique name, not the button. Pressing "Medium / needs
-naked pairs" must still start a Medium game — a child who wanted the library and
-got a fresh deal has been punished for curiosity, and will not press it again.
+A hint's link is the teaching payoff (§4.7), so it goes to
+`library.html#<technique>` — the entry for the technique that hint just used,
+not the top of the page.
 That means an anchor beside the label, not an `<a>` inside a `<button>`, which
 is invalid HTML and behaves differently depending on where in the button you
 land.
@@ -195,7 +198,7 @@ land.
 ## 7. Persistence
 
 `hints` and `hintsApplied` join the saved game under
-`sudoku.v1.game.<sizeKey>`, and `version` increments (slice 1 §5, slice 4 §3).
+`sudoku.v1.game.<sizeKey>`, and `version` increments (slice 1 §5, slice 3 §5).
 The reveal level is not saved; it belongs to the press, not to the game.
 
 ## 8. Tests
@@ -207,7 +210,7 @@ The reveal level is not saved; it belongs to the press, not to the game.
    `SIZES`, `cells` has `n²` entries all in `0..n`, every highlighted cell is in
    range, `caption` is non-empty, `id`s are unique.
 3. **Fixture honesty.** For every `example`, the technique named by its `id` is
-   what `firstStep` returns on it. Slice 3 tested that the technique fires; this
+   what `firstStep` returns on it. Slice 5 tested that the technique fires; this
    tests that it is the one the library claims and the one the hint would say
    out loud. It is what stops a caption drifting away from its board.
 4. **Cheapest first.** On a board where a naked single and a pointing pair both
@@ -230,17 +233,17 @@ sequence are checked by eye on `dev.html` and on the phone — see criterion 6.
 | 2 | The library lists all four techniques in tier order, each with a board, a caption, and a legend. | local |
 | 3 | On a tier-3 9×9, the hint names, then locates, then applies a pointing pair, and the applied step is undone by one undo. | local |
 | 4 | Entering a wrong digit and pressing hint produces the mistake message, not a technique. | local |
-| 5 | Every link between the game and the library is relative and works from both pages (slice 1 §2; slice 10 depends on it). | CI, spot-checked local |
+| 5 | Every link between the game and the library is relative and works from both pages (slice 1 §2; slice 11 depends on it). | CI, spot-checked local |
 | 6 | The four library boards are legible at 360px portrait with no zoom, and the three highlight roles are distinguishable. | **S-item** |
 | 7 | Assist counters survive a reload and are visible on the page. | local |
-| 8 | `public/src/core/` still imports nothing outside itself; `no-hardcoded-sizes.test.js` passes with exactly two exemptions. | CI |
+| 8 | `public/src/core/` still imports nothing outside itself; `no-hardcoded-sizes.test.js` passes with its one exemption. | CI |
 
-Criterion 6 needs the phone, like slice 1's criterion 3 and slice 4's criterion
-6. **Add it to `questions.md` as an S-item when this slice starts** — a
+Criterion 6 needs the phone, like slice 1's criterion 3 and slice 3's criterion
+4. **Add it to `questions.md` as an S-item when this slice starts** — a
 criterion nobody owns is a criterion that gets assumed.
 
 Criterion 7's visibility half is not decoration. An assist counter nobody can
-see is one nobody weighs while deciding whether to press hint again, and slice 8
+see is one nobody weighs while deciding whether to press hint again, and slice 9
 will then attach consequences to a number the player never watched accumulate.
 
 ## 10. Explicitly not in this slice

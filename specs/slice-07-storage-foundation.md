@@ -1,6 +1,6 @@
-# Slice 6 — Storage foundation: the Durable Object, the schema, the admin page
+# Slice 7 — Storage foundation: the Durable Object, the schema, the admin page
 
-Corresponds to `sudoku-design.md` §6 step 6. The first slice with a server in
+Corresponds to `sudoku-design.md` §6 step 7. The first slice with a server in
 it, and the first that writes a row.
 
 **Estimated cost:** Medium (20–60k). The code is small; the cost is that none of
@@ -25,7 +25,7 @@ is that a spec which comes out Large has not been cut yet.
 - **This slice.** The DO exists. `MIGRATIONS` and `SEEDS` exist. **Apply
   pending** and **Run seed** work. The status table shows applied, pending, and
   drifted. Failures render on the page.
-- **Slice 7.** **Erase everything**, JSON export, and re-import.
+- **Slice 8.** **Erase everything**, JSON export, and re-import.
 
 The cut is *not* between erase and export. `CLAUDE.md` makes export the
 precondition for erase and requires re-import alongside it, wired into the erase
@@ -40,8 +40,8 @@ architecture rather than a workaround: there is one DO per family code
 no tables. During this slice the schema is changed by editing the file and
 opening the admin page against a new code.
 
-That is free here and only here. Slice 8 is the first slice that writes a row
-anyone would miss, and slice 7 lands in between. This is why the cut is
+That is free here and only here. Slice 9 is the first slice that writes a row
+anyone would miss, and slice 8 lands in between. This is why the cut is
 affordable rather than merely convenient — take the same cut one slice later and
 it strands real data behind a drifted schema.
 
@@ -60,7 +60,7 @@ bent by it:
 
 The boundary that keeps that true: nothing under `public/` imports from
 `src/worker/` or `src/db/`, and nothing in those imports from `public/src/ui/`.
-`public/src/core/` is importable by both, and slice 9 will need it to be.
+`public/src/core/` is importable by both, and slice 10 will need it to be.
 
 ## 3. Files
 
@@ -135,7 +135,7 @@ Two things here are easy to get wrong and expensive afterwards.
   what S3 promises.
 - The Worker handles `/r/<code>/…`. Everything else falls through to the assets
   binding, which already serves `public/` for any path matching a file there.
-  The game stays at `/` and does not know rooms exist; slice 8 is where the
+  The game stays at `/` and does not know rooms exist; slice 9 is where the
   client learns a family code.
 - `<code>` is `[a-z0-9-]{3,32}`, lowercased before use. Anything else is a 400
   and never reaches `idFromName`. An unvalidated name is a room, and a typo in a
@@ -145,7 +145,7 @@ Two things here are easy to get wrong and expensive afterwards.
 
 **No login.** There is none in this project (`sudoku-design.md` §7.1), and this
 would be the only authenticated surface in the codebase if there were. Anyone
-with the admin URL can apply and seed, and from slice 7 can erase. §7.1 already
+with the admin URL can apply and seed, and from slice 8 can erase. §7.1 already
 accepts that anyone with the code is in; what makes erase survivable is slice
 7's export-first confirmation, not a password.
 
@@ -204,10 +204,10 @@ CREATE INDEX IF NOT EXISTS results_best
 - **No `bests` table.** §4.6 offers it as derived or as a query against
   `results`. A best time is `MIN(duration_ms)` over the index above; a table
   would be a cache with an invalidation rule, and R5 reads it once per page.
-  Slice 8 writes the query.
+  Slice 9 writes the query.
 - **The assist columns exist now**, before anything writes them. They are the
   shape of a row, and a slice whose job is to write rows should not also be
-  changing the schema. Slice 5 produces `hints` and `hints_applied`; Q3 produces
+  changing the schema. Slice 6 produces `hints` and `hints_applied`; Q3 produces
   `checks`.
 - **`size_key` is data, not a dimension.** `no-hardcoded-sizes.test.js` reads
   `public/src/core/` and does not read `.sql`, nor should it: the `4 | 6 | 9`
@@ -290,18 +290,18 @@ The status table has one row per entry in `MIGRATIONS`:
 | **drifted** | ledger row exists, checksum differs |
 
 Drifted is shown in a colour that means stop, with both checksums and one line
-saying what the fix is: from slice 7, Erase → Apply → Seed; until then, a new
+saying what the fix is: from slice 8, Erase → Apply → Seed; until then, a new
 family code (§1).
 
 The page also shows the room code it is acting on, in the heading —
-`CLAUDE.md` requires it to say which room, and slice 7 puts a destructive button
+`CLAUDE.md` requires it to say which room, and slice 8 puts a destructive button
 on this same page. Plus the ledger rows with their timestamps, and the last
 action's outcome, including the failing statement in a `<pre>` when there was
 one.
 
 Two buttons: **Apply pending** and **Run seed**. **Erase everything** is not
 rendered at all, not rendered disabled. A greyed-out button is a promise, and
-slice 7 is a better place to make it than a tooltip is.
+slice 8 is a better place to make it than a tooltip is.
 
 ## 10. Tests
 
@@ -353,8 +353,8 @@ per-code isolation and not one of them tests it.
 
 ## 12. Explicitly not in this slice
 
-Erase, JSON export, re-import (slice 7). Writing a result, timing, best times
-(slice 8). WebSockets, hibernation, `serializeAttachment`, race mode (slice 9) —
+Erase, JSON export, re-import (slice 8). Writing a result, timing, best times
+(slice 9). WebSockets, hibernation, `serializeAttachment`, race mode (slice 10) —
 the DO built here has no `webSocketMessage` handler and no route but admin.
 Player identity beyond a seeded name, any login, any secret, any dashboard
 action. The client does not talk to the Durable Object at all in this slice.

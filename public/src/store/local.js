@@ -6,9 +6,13 @@ const PREFIX = 'sudoku.v1.';
 const VERSION = 1;
 
 // The `v1` is for a change in the shape of a value, not for a change in which
-// values exist. The size suffix is here from the day the key was invented even
-// though slice 1 only ever writes size 9, so slice 2 orphans nothing.
-const gameKey = (sizeKey) => `${PREFIX}game.${sizeKey}`;
+// values exist.
+//
+// One saved game per size and difficulty, so neither picker destroys a board by
+// being pressed. Nine keys at three sizes and three tiers, each a few hundred
+// bytes — cheaper than asking a child whether they meant to abandon the puzzle
+// they were halfway through.
+const gameKey = (sizeKey, tierId) => `${PREFIX}game.${sizeKey}.${tierId}`;
 const PREFS_KEY = `${PREFIX}prefs`;
 
 function readJSON(key) {
@@ -37,12 +41,16 @@ function drop(key) {
 }
 
 /**
- * The saved game for one size, or null. A version mismatch, a parse failure or
- * a shape that does not match the size discards that one key and reports
- * nothing — this data is worth nothing and must never block startup.
+ * The saved game for one size and difficulty, or null. A version mismatch, a
+ * parse failure or a shape that does not match discards that one key and
+ * reports nothing — this data is worth nothing and must never block startup.
+ *
+ * A record written before difficulties existed has no `tierId` and fails here,
+ * which drops it. That is the intended path: the alternative is guessing which
+ * difficulty an old board was dealt at.
  */
-export function loadGame(sizeKey, cellCount) {
-  const key = gameKey(sizeKey);
+export function loadGame(sizeKey, tierId, cellCount) {
+  const key = gameKey(sizeKey, tierId);
   const saved = readJSON(key);
   if (saved === null) return null;
 
@@ -54,6 +62,7 @@ export function loadGame(sizeKey, cellCount) {
   const ok =
     saved.version === VERSION &&
     saved.sizeKey === sizeKey &&
+    saved.tierId === tierId &&
     Number.isInteger(saved.seed) &&
     Array.isArray(saved.givens) && saved.givens.length === cellCount &&
     Array.isArray(saved.values) && saved.values.length === cellCount &&
@@ -65,6 +74,7 @@ export function loadGame(sizeKey, cellCount) {
   }
   return {
     sizeKey,
+    tierId,
     seed: saved.seed,
     givens: Uint8Array.from(saved.givens),
     values: Uint8Array.from(saved.values),
@@ -72,10 +82,11 @@ export function loadGame(sizeKey, cellCount) {
   };
 }
 
-export function saveGame(sizeKey, { seed, givens, values, moveStack }) {
-  writeJSON(gameKey(sizeKey), {
+export function saveGame(sizeKey, tierId, { seed, givens, values, moveStack }) {
+  writeJSON(gameKey(sizeKey, tierId), {
     version: VERSION,
     sizeKey,
+    tierId,
     seed,
     givens: Array.from(givens),
     values: Array.from(values),
@@ -83,8 +94,8 @@ export function saveGame(sizeKey, { seed, givens, values, moveStack }) {
   });
 }
 
-export function clearGame(sizeKey) {
-  drop(gameKey(sizeKey));
+export function clearGame(sizeKey, tierId) {
+  drop(gameKey(sizeKey, tierId));
 }
 
 /**
@@ -104,8 +115,9 @@ export function savePrefs(prefs) {
 
 /**
  * Trailing debounce, so a burst of edits costs one write. `flush` runs a
- * pending call now: switching size has to land the old board before the new
- * one is read back, or a save still in the window is read as the old state.
+ * pending call now: switching size or difficulty has to land the old board
+ * before the new one is read back, or a save still in the window is read as
+ * the old state.
  */
 export function debounce(fn, ms) {
   let timer = 0;

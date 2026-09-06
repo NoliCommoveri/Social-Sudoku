@@ -80,10 +80,10 @@ would publish them.
 }
 ```
 
-Assets-only; there is no Worker script until slice 6, which adds `main` and the
+Assets-only; there is no Worker script until slice 7, which adds `main` and the
 Durable Object binding to this same file.
 
-### Two constraints that exist now to keep slice 10 cheap
+### Two constraints that exist now to keep slice 11 cheap
 
 The PWA slice is last, and everything it needs is free if slices 1–9 respect
 two rules and expensive to retrofit if they do not.
@@ -92,7 +92,7 @@ two rules and expensive to retrofit if they do not.
   CDN. A service worker precaching an absolute path that later moves is the
   standard way to ship an app that will not update.
 - **The served file set stays enumerable.** No dynamic `import()` of a computed
-  path. Slice 10's service worker precaches an explicit list, and a list it
+  path. Slice 11's service worker precaches an explicit list, and a list it
   cannot be checked against is a list that goes stale.
 
 ## 3. Representation
@@ -104,7 +104,7 @@ Decided here because everything downstream inherits it.
   transposition bug to make.
 - **Values are `Uint8Array(n*n)`**, `0` = empty, `1..n` = a digit.
 - **Candidates are `Uint16Array(n*n)`** of bitmasks, bit `v-1` set means `v` is
-  possible. `n ≤ 9` so a 16-bit lane is enough with room spare. Slice 3's solver
+  possible. `n ≤ 9` so a 16-bit lane is enough with room spare. Slice 5's solver
   is built entirely on these; slice 1 uses them inside the generator only.
 - **Geometry is a value, not a global.** Every core function takes `geom` as its
   first argument.
@@ -146,7 +146,7 @@ size: every cell is in exactly one row, one column, and one box at 4×4, 6×6, a
 9×9 alike. Nothing else in `core/` may write `3` for that count — import this.
 
 Built once per size and memoized on `${n}:${boxW}:${boxH}`. Building it is
-cheap; the memo is so slice 3's solver can call `makeGeometry` freely without
+cheap; the memo is so slice 5's solver can call `makeGeometry` freely without
 thinking about it.
 
 `boxW * boxH === n` is asserted. `boxW` is the box's width in columns, `boxH`
@@ -182,9 +182,9 @@ Walk cells in shuffled order. Remove one. If `countSolutions(..., 2) === 1`,
 keep it removed; otherwise put it back. One pass.
 
 This gives a set that is uniquely solvable and minimal *with respect to that
-removal order* — not globally minimal, which nobody needs. Slice 4 builds tiers
-by adding clues back to this set (§4.3), so "as few clues as this order allows"
-is the right base.
+removal order* — not globally minimal, which nobody needs. Slice 3 turns the
+removal into a difficulty by stopping it at a clue count (§4.3) rather than
+running it to the end, so this pass is the one it parameterises.
 
 **Q6: no symmetry.** See `questions.md`.
 
@@ -242,7 +242,7 @@ Chromebook has a keyboard and typing is faster than tapping, the phone does not.
 - **Check** (Q3) marks currently-wrong cells against the solution. Marks clear
   on the next edit.
 - **Completion** is detected on every edit: board full and equal to the
-  solution. Says so. Records nothing — there is nothing to record until slice 8.
+  solution. Says so. Records nothing — there is nothing to record until slice 9.
 
 ### `store/local.js`
 
