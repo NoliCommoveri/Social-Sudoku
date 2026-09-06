@@ -1,7 +1,13 @@
 # Identity and the record
 
 Who a player is, how the site knows, and what it remembers about them.
-Delivers H3 and H4. Built in Phases 2 and 3.
+Delivers H3 and H4.
+
+Built across three sessions, and the seam between the first two matters: **§2
+and §3.2 — the gate, the picker and the two cookies — are Phase 2 Session C.
+§3 and §3.1's editing — creating a profile, changing a screen name, changing an
+avatar — are Session D.** §4, the record, is Phase 3, which needs the picker and
+not the editing. `../ROADMAP.md` has why the line falls there.
 
 ## 1. This is a family, not a user base
 
@@ -136,8 +142,9 @@ No move-by-move history. No replays. The record answers *what happened*, not
   workflow seeds exist for — with one thing worth knowing before you do it:
   the seed will not change a row that already exists, because every statement
   in it is `ON CONFLICT DO NOTHING`. So the names are worth getting right
-  *before* the first **Run seed**; after it, renaming is the picker's job. The
-  avatar keys in that file must be names the built-in set actually contains.
+  *before* the first **Run seed**; after it, editing the file is no longer how a
+  name changes, and nothing in the site changes one until Session D. The avatar
+  keys in that file must be names the built-in set actually contains.
 
   The passphrase itself is not in the database and is not seeded. It is the
   Worker secret `FAMILY_PASSPHRASE`, set in the dashboard — setup task **A3**.
