@@ -206,6 +206,39 @@ room setup. That is five or six rounds, which is one sitting.
 
 These add real depth but they also add a second information channel and a lot of edge cases. **Revisit after:** the base game has been played through a full session by all four humans.
 
+### 2.6 A seat that stops trading
+
+**Open.** A player's cards move only when that player trades, so a seat that
+stops — a phone put down, a 5-year-old distracted, a disconnect in Phase 7 —
+freezes nine cards where they sit. Nobody can corner a commodity somebody else
+is holding one of, and a round with no corner has nothing that ends it: expiry
+returns offers to hands and the trading phase has no clock on it.
+
+It is not an edge case at four seats. Measured over forty seeded deals with one
+frozen seat and three bots trading, **eleven rounds reached a corner and
+twenty-nine could not** — with four commodities and nine cards each, the frozen
+hand has to happen to hold none of some commodity for the round to be winnable
+at all. Bigger tables are safer; three seats are worse.
+
+Nothing in the rules module addresses this today, and the local driver has no
+opinion about it either — `specs/session-2-bots-and-the-local-driver.md` §6
+plays its end-to-end session with a human seat that takes the occasional trade,
+which is what a person does and is not a fix.
+
+The candidates, cheapest first:
+
+- **A stall clock.** No trade in the room for *N* seconds redeals the round, no
+  score. One number and one branch in `tick`; loses whatever the round had built.
+- **A stall clock that scores.** Same trigger, but the largest holding at the
+  table takes the corner value. Rewards sitting on a big pile, which is the
+  opposite of the game.
+- **Fill the seat with a bot.** A seat idle for *N* seconds starts being played
+  by `botAction`. Keeps the round alive and is the only candidate that helps the
+  Phase 7 disconnect too. Costs a rule about how the seat is handed back.
+
+*Rec:* the third, decided when session 4 settles what happens to an abandoned
+session, because it is the same question asked twice.
+
 ---
 
 ## 3. Bots

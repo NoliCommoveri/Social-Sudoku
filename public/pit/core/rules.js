@@ -12,6 +12,7 @@
 
 import { mulberry32, shuffled } from './rng.js';
 import { HAND, MAX_OFFER, COMMODITY_KEYS, drawCommodities, valuesFor } from './commodities.js';
+import { botAction, botDelay } from './bot.js';
 
 export const id = 'pit';
 
@@ -40,6 +41,10 @@ export const defaultConfig = {
 // reproducible on its own and the deal does not depend on how much trading
 // happened in the one before it.
 const ROUND_STRIDE = 0x9e3779b1;
+
+// Bot substreams are offset by this so that consecutive draws are consecutive
+// only in the counter and not in the seed.
+const BOT_STRIDE = 0x85ebca6b;
 
 const OK = Object.freeze({ ok: true });
 const refuse = (reason) => ({ ok: false, reason });
@@ -148,6 +153,7 @@ export function init(seats, config = {}, seed = 0) {
     scores,
     history: [],
     botsReadyAt: {},
+    botSeq: 0,
     ready: [],
     roundEndsAt: 0,
   }, 1);
@@ -379,9 +385,17 @@ function advance(state) {
 /* ------------------------------------------------------------------- tick */
 
 /**
- * Three things and no more: expire offers, end the reveal, and harvest for
- * whoever qualifies when the room was set up that way. Bot gating is the fourth
- * and arrives in session 2.
+ * Four things and no more: expire offers, end the reveal, harvest for whoever
+ * qualifies when the room was set up that way, and let one bot act.
+ *
+ * Bots live here rather than in whichever driver is attached because the gate
+ * they wait on is a field of State, and State is opaque to a room — see
+ * `../../../docs/pit/specs/session-2-bots-and-the-local-driver.md` §2. A driver
+ * therefore has nothing bot-shaped in it and the local driver and the Durable
+ * Object cannot diverge over bot timing.
+ *
+ * Returns the state it was given when nothing happened, which is how a driver
+ * knows not to push a view.
  * @returns {{ state: object, events: object[] }}
  */
 export function tick(state, now) {
@@ -419,7 +433,70 @@ export function tick(state, now) {
     events.push(...done.events);
   }
 
+  if (next.phase === 'trading') {
+    const done = bots(next, now);
+    next = done.state;
+    events.push(...done.events);
+  }
+
   return { state: next, events };
+}
+
+/**
+ * The stream a bot draws from, taken out of state because tick is pure and is
+ * given no rng. `botSeq` is session-long and never reset: resetting it per
+ * round would hand two rounds the same stream.
+ */
+function botRng(state, seq) {
+  return mulberry32((state.seed ^ Math.imul(state.round, ROUND_STRIDE) ^ Math.imul(seq + 1, BOT_STRIDE)) | 0);
+}
+
+/**
+ * At most one bot acts per tick. When several gates are open the oldest goes
+ * and the rest wait: a backgrounded phone comes back with every gate open and
+ * would otherwise fire four actions into one frame, the client gets one change
+ * per view push, and a Durable Object's work per alarm stays bounded.
+ */
+function bots(state, now) {
+  const seated = state.seats.filter((seat) => seat.isBot);
+  if (!seated.length) return { state, events: [] };
+
+  const readyAt = { ...state.botsReadyAt };
+  let seq = state.botSeq;
+  let changed = false;
+
+  // deal() clears the gates, and an absent gate is not an open one: the first
+  // tick of a round seeds them, or the round would open with a flurry.
+  for (const seat of seated) {
+    if (readyAt[seat.playerId] === undefined) {
+      readyAt[seat.playerId] = now + botDelay(seat.botLevel, botRng(state, seq++));
+      changed = true;
+    }
+  }
+
+  const due = seated
+    .filter((seat) => readyAt[seat.playerId] <= now)
+    .sort((a, b) => readyAt[a.playerId] - readyAt[b.playerId]);
+
+  let next = state;
+  const events = [];
+  if (due.length) {
+    const seat = due[0];
+    // The delay is drawn first and from its own substream, so how long a bot
+    // waits cannot depend on how many draws its decision took — the board must
+    // not be able to reach the clock even through the stream position.
+    readyAt[seat.playerId] = now + botDelay(seat.botLevel, botRng(state, seq++));
+    const action = botAction(view(state, seat.playerId), seat.botLevel, botRng(state, seq++));
+    changed = true;
+    if (action && validate(state, seat.playerId, action).ok) {
+      const done = apply(state, seat.playerId, action, now);
+      next = done.state;
+      events.push(...done.events);
+    }
+  }
+
+  if (!changed) return { state, events };
+  return { state: { ...next, botsReadyAt: readyAt, botSeq: seq }, events };
 }
 
 /* ------------------------------------------------------------------- view */
