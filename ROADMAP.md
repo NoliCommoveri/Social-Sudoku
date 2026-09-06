@@ -66,8 +66,9 @@ Setup tasks in `docs/architecture.md` §8. A1 — deleting the Worker left orpha
 by the rename — comes before the rest of them and before any binding exists.
 
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
-sibling, both rewritten for D1. Three sessions, because the erase/export sibling
-and the avatar set are each a piece of work rather than a detail of one.
+sibling, both rewritten for D1. Four sessions, because the erase/export sibling,
+the avatar set, and editing a profile are each a piece of work rather than a
+detail of one.
 
 **Session A — database and admin.** Medium, ~50k. ✅ Built. `wrangler.jsonc`
 gains `main`, the D1 binding and the `Text` rule for `**/*.sql`.
@@ -86,11 +87,28 @@ JSON export wired into the erase confirmation itself, and re-import. Separable
 from A, and must land before Phase 3 — the first phase writing a row anyone
 would miss.
 
-**Session C — gate, profiles, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
-signing, the `gate` and `who` cookies, `/api/players`, the picker, the avatar
-set, `public/shared/theme.css`, the shelf. Blocked on **A3**; **A4** follows it.
-This one sits at the top of its band and splits at the theme/shelf boundary if
-the avatar SVGs run long.
+**Session C — gate, picker, shelf.** Medium–Large, ~60k. Passphrase page, HMAC
+signing, the `gate` and `who` cookies, `/api/players` read-only, the picker, the
+avatar set, `public/shared/theme.css`, the shelf. Blocked on **A3**; **A4**
+follows it. This one sits at the top of its band and splits at the theme/shelf
+boundary if the avatar SVGs run long.
+
+**Session D — editing a profile.** Small–Medium, ~30k. Create a profile, change
+a screen name, change an avatar: the write half of `/api/players` and the
+screens for it. H3 asks for all three, so this is not optional, only later.
+
+**Why C and D split here.** C is at the top of its band before any of D is in
+it, and the line between them is the one Phase 3 cares about: **Phase 3 needs
+picking, not editing.** A `play_results` row needs a `player_id`, which the
+`who` cookie answers; nothing in the record depends on a name being editable. So
+D can follow Phase 3 if something more urgent appears, and C cannot.
+
+The cost of the split, stated so it is a choice rather than a surprise: between
+C and D a screen name is changed by editing `seed_players.sql` and pressing
+**Run seed**, which you can do and an 11-year-old cannot. That is survivable
+only because the seed carries the real names in before the first press — a name
+the seed has already inserted is not changed by a later one
+(`docs/identity-and-stats.md` §5).
 
 ### Phase 3 — The record
 
