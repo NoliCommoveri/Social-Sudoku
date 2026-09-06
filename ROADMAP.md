@@ -15,20 +15,22 @@ are:
   9×9 — `public/sudoku/core/`, about 600 lines, zero dependencies.
 - Solo play with undo, redo, and a check button — `public/sudoku/ui/`.
 - In-progress boards saved per size and tier in `localStorage`.
-- The hub at `public/index.html`: a passphrase gate, the picker, and the shelf
-  the games sit on, drawing from `public/shared/` — the tokens, the thirty
-  avatars, and the two calls the client makes.
-- 154 tests under `test/`, run by GitHub Actions on every push.
+- The hub at `public/index.html`: a passphrase gate, the picker, the profile
+  editor and the shelf the games sit on, drawing from `public/shared/` — the
+  tokens, the thirty avatars, the profile rules, and the four calls the client
+  makes.
+- 178 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
   and the admin page at `/admin` that applies it, seeds it, backs it up, erases
   it and restores it — `worker/`.
-- Identity: the gate at `/gate`, two signed cookies, and `/api/players` —
-  `worker/auth.js`, `worker/gate.js`, `worker/api.js`.
+- Identity: the gate at `/gate`, two signed cookies, and the four calls behind
+  them — `worker/auth.js`, `worker/gate.js`, `worker/api.js`.
 
-No Durable Object and no stored results. Profiles can be picked, not yet
-edited; nothing a player would miss has been written anywhere yet.
+No Durable Object and no stored results. Profiles are made, renamed and
+re-faced from the hub; nothing a player would miss has been written anywhere
+yet.
 
 ## The five things this is for
 
@@ -66,6 +68,10 @@ move was clean.
 ### Phase 2 — The hub: door, profiles, database
 
 The first phase with a server in it. Delivers **H1** and **H3**.
+
+All four sessions are built. What is left is not code: setup tasks **A3** and
+**A4**, and the browser checks **S6**–**S9**, which can be answered nowhere but
+a deployment.
 
 Setup tasks in `docs/architecture.md` §8. A1 — deleting the Worker left orphaned
 by the rename — comes before the rest of them and before any binding exists.
@@ -112,22 +118,23 @@ exempt because a gated `/admin` is a database that can never be brought up.
 client's two calls; `public/hub/` is the picker and the shelf. Needs **A3** to
 be usable at all, and **A4** follows it. **S8** is the browser half.
 
-**Session D — editing a profile.** Small–Medium, ~30k. Create a profile, change
-a screen name, change an avatar: the write half of `/api/players` and the
-screens for it. H3 asks for all three, so this is not optional, only later.
+**Session D — editing a profile.** Small–Medium, ~30k. ✅ Built.
+[`docs/hub/specs/phase-2-session-d-editing-a-profile.md`](docs/hub/specs/phase-2-session-d-editing-a-profile.md)
+is the design. `public/shared/profile.js` is the pure half — what a name and a
+face have to pass — and it sits under `public/` rather than `worker/` so the
+editor and the Worker check the same rules without the dependency between the
+trees turning round. `worker/api.js` gained `POST /api/players` and
+`PATCH /api/players/:id`; a refusal names the field it is about, so the editor
+can put the sentence beside the control that is wrong. Creating a profile picks
+it only when the device had nobody, which is the difference between somebody
+making themselves and a parent making one for a child. The editor is the hub's
+third screen and both ways into it are on the picker — the front page stays the
+games and the faces. **S9** is the browser half.
 
-**Why C and D split here.** C is at the top of its band before any of D is in
-it, and the line between them is the one Phase 3 cares about: **Phase 3 needs
+**Why C and D split.** C was at the top of its band before any of D was in it,
+and the line between them is the one Phase 3 cares about: **Phase 3 needs
 picking, not editing.** A `play_results` row needs a `player_id`, which the
-`who` cookie answers; nothing in the record depends on a name being editable. So
-D can follow Phase 3 if something more urgent appears, and C cannot.
-
-The cost of the split, stated so it is a choice rather than a surprise: between
-C and D a screen name is changed by editing `seed_players.sql` and pressing
-**Run seed**, which you can do and an 11-year-old cannot. That is survivable
-only because the seed carries the real names in before the first press — a name
-the seed has already inserted is not changed by a later one
-(`docs/identity-and-stats.md` §5).
+`who` cookie answers; nothing in the record depends on a name being editable.
 
 ### Phase 3 — The record
 
@@ -198,10 +205,11 @@ not exist at all until Phase 2.
 `docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
 close, all about the board, which nothing since has touched — and **S6**,
-**S7** and **S8**, which can be checked nowhere but a deployment. They run in
-that order: S6 leaves a database with the schema and the six players in it, S7
-erases and rebuilds it, and S8 needs both plus setup task **A3**, without which
-nobody can get past the gate.
+**S7**, **S8** and **S9**, which can be checked nowhere but a deployment. They
+run in that order: S6 leaves a database with the schema and the six players in
+it, S7 erases and rebuilds it, S8 needs both plus setup task **A3**, without
+which nobody can get past the gate, and S9 is the editor, which needs somebody
+to be through it.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

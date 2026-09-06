@@ -219,6 +219,41 @@ Steps 8 and 9 are `design-language.md` §5's two questions, and they are the
 reason the rest of this exists. A "no" on either is not a bug report — it is the
 shelf reopening.
 
+### S9 — Check making and changing a profile, on the phone
+
+Phase 2 Session D's acceptance criteria 2–8
+(`../../hub/specs/phase-2-session-d-editing-a-profile.md` §7). Do **S8** first:
+this needs somebody through the gate and a picker with faces on it.
+
+On the Android phone, in portrait.
+
+1. **Tap the bar, then `New player`.** Type a name, tap a face, press
+   **Make me**. You are that person, on the shelf, and the new face is at the
+   end of the family strip. *(criteria 2, 3)*
+2. **Tap the bar, then `Change my name or face`.** Change the name, save, and
+   look at the bar and the strip: both say the new one straight away.
+   *(criterion 4)*
+3. **Try to take a face somebody else has.** It cannot be tapped and it carries
+   their name. Then type a name somebody else has and press save: a sentence
+   says so, and the screen scrolls to it rather than leaving it above the fold.
+   *(criterion 5)*
+4. **Reload `/`.** Still you, no gate, no picker — a rename is not a new
+   player. *(criterion 6)*
+5. **On a second device that is somebody else**, make a profile for one of the
+   little ones. That device should still be *you* afterwards, and the new
+   profile should be on the first device's picker after a reload.
+   *(criterion 3)*
+6. **Look for anything smaller than a thumb, and for horizontal scroll**, on the
+   editor with all thirty faces on it. Nothing under 64px, no type under 16px,
+   no sideways drag, and the save button stays reachable without scrolling to
+   the bottom. Do it on the Chromebook too. *(criterion 7)*
+7. **Hand the phone to the 11-year-old and say nothing except "change your
+   name".** Whether they find it, and how long it takes, is the finding.
+   *(criterion 8)*
+
+Step 7 is the one this exists for. If they cannot find it, the two ways into the
+editor are in the wrong place, and that is a design change rather than a bug.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
@@ -233,8 +268,9 @@ hub's four setup tasks are in `../../architecture.md` §8.
 The players' names are now the hub's business, not sudoku's, and there is no
 family code any more — one Durable Object per family code was replaced by a
 shared D1 (`../../architecture.md` §3). What is still needed from you is the
-family passphrase and the screen names to seed, tracked in
-`../../identity-and-stats.md` §5. It does not block anything.
+family passphrase, tracked in `../../identity-and-stats.md` §5; the screen names
+are no longer a due out, because the site changes them now. It does not block
+anything.
 
 ---
 
