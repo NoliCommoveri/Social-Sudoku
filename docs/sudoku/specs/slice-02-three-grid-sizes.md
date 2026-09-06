@@ -1,6 +1,6 @@
 # Slice 2 — All three grid sizes
 
-Corresponds to `sudoku-design.md` §6 step 2.
+Corresponds to `../design.md` §6 step 2.
 
 **Estimated cost:** Small (< 20k), *if* slice 1 held the §4.1 rule. If it did
 not, this slice is where that bill arrives and it becomes Medium.

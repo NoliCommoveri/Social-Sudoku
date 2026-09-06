@@ -1,6 +1,6 @@
 # Slice 1 — Grid model, generator, solo play
 
-Corresponds to `sudoku-design.md` §6 step 1. One grid size, no timer, no server,
+Corresponds to `../design.md` §6 step 1. One grid size, no timer, no server,
 no difficulty selection.
 
 **Estimated cost:** Medium (20–60k). The generator is the only part with real

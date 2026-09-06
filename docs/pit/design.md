@@ -1,0 +1,212 @@
+# Trading Game ("Pit-style") — Design Spec
+
+**Status:** design stage, no code. Phase 6 of `../../ROADMAP.md`. First consumer
+of the generic `GameRoom` interface (`../gameroom.md`) at `games.immotus.app`.
+
+**How to read this document.** Items marked **Decided** came from the user. Items marked **Recommendation** are proposals from design discussion — they have named alternatives and a revisit trigger, and a future session should treat them as open unless the user has since confirmed them. Nothing here is irreversible.
+
+---
+
+## 0. Context
+
+- Target players: user, husband, two kids (11 and 12). Bots fill remaining seats.
+- Deployed under `games.immotus.app` as one game module inside a shared hub Worker (single `GameRoom` Durable Object class, rules supplied per-game). Stack in `../architecture.md`.
+- A separate simplified version for a 4- and 5-year-old is planned **last**, as its own mode. Notes in §7.
+- The horse breeding game is **not** part of this hub. It stays on its own subdomain.
+- IP: game mechanics are not copyrightable. Do not use the Parker Brothers name, its commodity set as a set, its card art, or the "Corner the Market" / Bull & Bear card naming and trade dress. Original theme required — see §2.1.
+
+---
+
+## 1. Room interface contract
+
+Pit is the first game through this interface, so it defines it. Sudoku is the second consumer and its needs are noted where they pull in a different direction.
+
+`GameRoom` (the Durable Object) owns and the rules module never touches:
+
+- Room code generation, join/leave, seat assignment
+- WebSocket lifecycle, hibernation attachment, reconnect
+- Player identity passthrough
+- Broadcast fan-out
+- Disconnect grace timer
+
+The rules module supplies:
+
+```ts
+interface GameRules<State, Action, View> {
+  minPlayers: number;
+  maxPlayers: number;
+  supportsBots: boolean;
+
+  init(players: Player[], config: GameConfig): State;
+
+  // Validation and application are separate so the room can reject
+  // without mutating. Must be pure and deterministic.
+  validate(state: State, playerId: string, action: Action): Result;
+  apply(state: State, playerId: string, action: Action): { state: State; events: Event[] };
+
+  // CRITICAL for Pit: each player sees only their own hand plus
+  // public offer counts. Never broadcast full state.
+  view(state: State, playerId: string): View;
+
+  // Real-time games only. Called on DO alarm.
+  tickIntervalMs?: number;
+  tick?(state: State, now: number): { state: State; events: Event[] };
+
+  isComplete(state: State): Outcome | null;
+
+  // Bot seats. Called by the room, never self-scheduling.
+  botAction?(view: View, difficulty: BotLevel): Action | null;
+}
+```
+
+**Two things this interface must support from day one**, or it gets rewritten at game three:
+
+1. **A tick loop, not just discrete actions.** Pit needs one (bot timing, offer expiry). Sudoku's race mode needs one (clock). A pure request/response action queue will not cover it.
+2. **Per-player independent state.** Sudoku race mode gives every player their own grid on the same puzzle. Pit gives every player a private hand. `State` must not assume one shared board.
+
+**Recommendation:** `apply()` returns a new state rather than mutating, so the room can snapshot for reconnect replay. *Alternative:* mutate in place and persist after each action, which is simpler and probably fine at family scale. *Revisit if:* reconnect-mid-round turns out to need replay rather than a fresh view push.
+
+**Sudoku solo mode should not use the room at all.** No socket, no DO — static client plus a standings write. Do not route it through `GameRoom` for the sake of consistency.
+
+---
+
+## 2. Game rules
+
+### 2.1 Theme and commodities
+
+**Decided:** original theme, not the classic commodity set.
+
+Deck is *C* commodities where *C* = number of seats (humans + bots), 9 cards each. Four seats = 4 commodities = 36 cards, 9 dealt to each player.
+
+**Recommendation — pick one theme and stay with it**, because the little-kid version in §7 needs each commodity to be distinguishable by **shape + color alone, with no text**:
+
+| Option | Commodities | Notes |
+|---|---|---|
+| Space cargo | Ice, Ore, Fuel, Alloy, Seed, Data | Distinct icons, works for pre-readers |
+| Market stalls | Bread, Wool, Salt, Honey, Iron, Spice | Warm, familiar to young kids |
+| Elements | Fire, Water, Earth, Air, Light, Stone | Strongest color-coding, weakest theme fiction |
+
+Point values per commodity should differ (classic Pit does this and it matters — it makes *which* commodity you chase a real decision, not just whichever you were dealt most of). Suggested spread: 55 / 60 / 65 / 70 / 75 / 80 for a six-commodity set, low value = more common target.
+
+### 2.2 Core loop
+
+1. Deal 9 cards per player, one commodity's worth per player, shuffled together.
+2. Trading opens. All players act simultaneously — no turns.
+3. A player offers **1 to 4 cards, all of the same commodity**, face down. Only the **count** is public. The commodity is not.
+4. Another player holding that same count of some single commodity can accept. Cards swap blind. Neither side knew what they were getting.
+5. First player to hold all 9 of one commodity has cornered it and ends the round.
+6. Score, redeal, repeat to a target score.
+
+The count-only information channel is the entire game. Everything in the UI should protect it: never leak commodity identity in an offer, an animation, a sound, or a timing tell.
+
+### 2.3 Real-time model — the central design decision
+
+**Recommendation: public offer board with immediate resolution.**
+
+- A player posts an offer: a count (1–4) and a private card selection. It appears to everyone as `Bo: 3`.
+- Any player holding 3 of a single commodity can hit it.
+- Offers stay live until accepted, withdrawn, or expired (**recommendation:** 20s expiry, so abandoned offers don't clog the board).
+- A player may hold **one** live offer at a time. *Alternative:* allow multiple, which is closer to real table chaos but makes the board unreadable on a phone.
+
+Why this over continuous shouting: a faithful open-outcry version over mobile WebSockets means whoever has the best connection and the fastest thumbs wins every contested trade. That is not a skill the game is about. The offer board keeps the blindness, keeps the count channel, keeps the simultaneity, and drops the reflex race.
+
+*Alternative worth keeping on the table:* a hybrid where offers resolve on a short tick (2s) rather than instantly, batching simultaneous accepts and resolving them randomly rather than first-come. Fairer across latency, slightly less responsive. **Revisit if:** playtesting shows one player consistently winning races for reasons unrelated to play.
+
+**Race resolution:** the DO is single-threaded, so simultaneous accepts serialize naturally. First accept wins; losers get an explicit "taken" response, not a silent failure. Their cards must be returned to hand, not consumed.
+
+### 2.4 Corner detection
+
+**Recommendation: manual ring, with a visible prompt.** When a player reaches 9 of a kind, a ring button lights up. They must press it. It preserves the tension of the physical game and the real possibility of missing your own win while you're mid-trade.
+
+*Alternative:* auto-detect and end the round instantly. Removes a failure mode that a younger player will hit repeatedly and find frustrating rather than funny.
+
+**Revisit based on:** how the 11-year-old reacts the first time they miss a corner. This is a genuine coin flip and should be a room config toggle rather than a build-time choice.
+
+### 2.5 Scoring
+
+Corner scores the commodity's point value. Play to a target (500 is a reasonable default; make it configurable, since a family session length varies).
+
+**Not in v1 — deferred, not rejected:**
+- Wild card (classic "Bull") — allows a corner with 8 + wild, at reduced value
+- Penalty card (classic "Bear") — dead weight, penalizes whoever holds it at round end
+- Doubling the corner value when cornered on the wild
+
+These add real depth but they also add a second information channel and a lot of edge cases. **Revisit after:** the base game has been played through a full session by all four humans.
+
+---
+
+## 3. Bots
+
+Required — the game is thin at four and the kids won't always all be available.
+
+### 3.1 Decision logic
+
+Per bot turn evaluation:
+
+1. **Target selection.** Usually the commodity it holds most of. Switch targets when another commodity overtakes it by 2+, with hysteresis so it doesn't thrash. Occasionally (~10%) commit to a contrarian target and hold it.
+2. **Offer construction.** Offer from its smallest non-target holdings, largest offerable block first.
+3. **Accept evaluation.** Accepting count *K* means giving up *K* cards it holds. Accept when the expected value of *K* unknown cards exceeds the value of what it gives up — which is nearly always true when it's dumping non-target cards, so the real filter is: never break its target holding.
+
+### 3.2 The three things that are actually hard
+
+**Reaction timing.** A bot that accepts in 8ms wins every offer and the kids never trade. Bots need randomized latency (**recommendation:** 800–2500ms, sampled per action, scaled by difficulty) and that latency must **not** correlate with how good the trade is. If a bot hesitates on bad offers and pounces on good ones, players will read the tell within one session.
+
+**Information modeling.** Every posted count is public information. A bot that logs the full count history and infers who is cornering what is genuinely strong — plausibly stronger than the humans. **Recommendation:** cap this deliberately by difficulty. Easy bots see only the current board; hard bots see the last N counts per player. Do not let a bot see everything just because it can.
+
+**Not being exploitable.** Deterministic accept thresholds get reverse-engineered by a 12-year-old in about four rounds. Add noise: occasional bad trades, occasional passes on good ones, occasional target switches with no basis.
+
+### 3.3 Scheduling
+
+Bots do not self-schedule. The room's tick calls `botAction()`; bot latency is implemented as "earliest time this bot may act," checked on tick. This keeps bot behavior deterministic and replayable, and keeps all timing in one place.
+
+---
+
+## 4. Client
+
+- Hand grouped by commodity, count badges, tap to select a block.
+- Offer board: one row per live offer, `name` + big count numeral, tap to accept, greyed if you can't match the count.
+- Persistent visible: your own counts per commodity, your target's progress toward 9.
+- Ring button, dark until legal.
+- Round-end reveal of everyone's final hands — this is where the count history retroactively becomes readable and is a large part of the fun.
+
+**The base-path warning that was here does not apply.** There is no bundler —
+`public/pit/` is plain ES modules with relative paths and serves at `/pit/`
+because that is where the files are. See `../architecture.md` §2.1.
+
+---
+
+## 5. Open questions for the user
+
+1. Which theme (§2.1)?
+2. Manual ring or auto-corner (§2.4)?
+3. Target score, and roughly how long a session should run?
+4. Should bots be present by default, or only when seats are short?
+5. ~~Cross-game standings at the hub now, or leave identity stubbed for v1?~~
+   Settled: identity and standings land in Phases 2–3, well before Pit. Pit
+   reads them rather than stubbing anything. See `../identity-and-stats.md`.
+
+---
+
+## 6. Build order (recommendation)
+
+1. `GameRoom` DO — join, seats, sockets, reconnect, tick, per-player views. No game.
+2. Pit rules module, hot-seat testable, no bots.
+3. Client, offer board, ring.
+4. Bots.
+5. Scoring, multi-round, standings.
+6. Little-kid mode (§7).
+
+Each step should be playable before the next starts.
+
+---
+
+## 7. Little-kid mode (ages 4 and 5) — deferred
+
+Not a difficulty slider. Separate mode, same room infrastructure.
+
+- **No text anywhere.** Commodities are shape + color. Counts are pip dots, not numerals.
+- **Tap only.** Tap commodity, tap count, tap offer.
+- Smaller: 3–4 commodities, 5-card corners, 4–6 card hands.
+- Slower tick, and a helper that highlights offers matching their target.
+
+Mixed tables with the older kids were discussed and set aside as the harder problem. If revisited, the approach that seemed most promising was asymmetric win conditions on a shared deck — 5-card corners for the little ones, 9 for adults — plus the helper, rather than any speed handicap, since visible speed handicaps get noticed and resented.

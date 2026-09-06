@@ -16,24 +16,14 @@ This file is the current unknowns, not a log of resolved ones.
 
 ## Setup tasks
 
-### S1 — Connect this repo to Cloudflare Workers
+### S1 — Connect this repo to Cloudflare Workers ✅ done
 
-One-time, in the Cloudflare dashboard: **Workers & Pages → Create → Import a
-repository**, pick `NoliCommoveri/Social-Sudoko`, branch `main`.
+The repo builds and deploys on push to `main`, serving at a `.workers.dev` URL.
+Build command empty, deploy command the wrangler default, both correct.
 
-Two fields matter and neither is the default:
-
-- **Build command:** leave empty. There is no build step and never will be.
-- **Deploy command:** the default (`npx wrangler deploy`) is correct. That runs
-  on Cloudflare's build machines, not on yours, which is why it does not violate
-  the no-CLI rule.
-
-Everything else comes from `wrangler.jsonc`, which is committed in slice 1.
-
-**Do this once slice 1's code is merged**, not before — there is nothing to
-serve until then, and nothing in S2 can be checked until the phone has a URL to
-open. If the worker name `social-sudoko` collides with one of your existing
-workers, tell me and I will change it in `wrangler.jsonc`.
+The remaining Cloudflare setup — the D1 database, the two secrets, the custom
+domain `games.immotus.app`, and the Worker rename — is hub work and lives in
+`../../architecture.md` §8, not here.
 
 ### S2 — Verify slice 1 on the phone and the Chromebook
 
@@ -44,7 +34,7 @@ the point of trying to call slice 1 done.
 
 Order matters — each step needs the one above it.
 
-1. **S1 is done** and `social-sudoko.<subdomain>.workers.dev` loads. *(criterion
+1. **S1 is done** and the `.workers.dev` URL loads. *(criterion
    2)*
 2. **On the Android phone, open `/dev.html` and press "time 100 deals".** Report
    the p95 it prints. Under 250ms passes; over 1s is a hard fail and sends
@@ -102,33 +92,22 @@ old.
 Answer 2 with a rough time and whether anyone got stuck, not a yes or no. It is
 the only measurement in this project that a test cannot take.
 
-### S3 — Nothing else
+### S3 — Nothing else, for sudoku
 
-No secrets, no environment variables, no D1 database, no KV namespace. Slice 7
-adds a Durable Object, which is declared in `wrangler.jsonc` and needs no
-dashboard action.
+Sudoku itself needs no secret, no environment variable and no binding. The
+hub's four setup tasks are in `../../architecture.md` §8.
 
 ---
 
 ## Due outs
 
-### D1 — The family code, and the players' names
+### D1 — Moved
 
-Slice 7 seeds a `players` table and its admin page is opened at
-`/r/<code>/admin`. Both need values I do not have.
-
-- **The family code.** Lowercase, `[a-z0-9-]`, 3–32 characters. Anyone holding
-  it is in and, from slice 8, can erase the room (§7.1). So not `sudoku`, and
-  not your surname on its own.
-- **The names**, spelled as they should appear on a leaderboard. One row per
-  name is the whole of identity in this project — two people cannot both be
-  "mum", because the second one inherits the first one's best times.
-
-**This does not block slice 7.** It commits placeholder names, and your answer
-is delivered by editing `src/db/sql/seed_players.sql` in the GitHub web editor
-and pressing **Run seed** — which is the exact workflow seeds exist for, so
-answering this late is a demonstration rather than a cost. The only residue is a
-placeholder row per unused name, cleared by slice 8's erase.
+The players' names are now the hub's business, not sudoku's, and there is no
+family code any more — one Durable Object per family code was replaced by a
+shared D1 (`../../architecture.md` §3). What is still needed from you is the
+family passphrase and the screen names to seed, tracked in
+`../../identity-and-stats.md` §5. It does not block anything.
 
 ---
 
@@ -190,30 +169,28 @@ clue count could only be hit within two, and an added clue would have to bring
 its mirror past the openness floor. Aesthetics are not worth a difficulty that
 means less than it says.
 
-### Q7 — What persists locally before the DO exists?
+### Q7 — What persists locally, and what does not
 
-Slices 1–6 have no server. Something still needs to survive a closed tab.
+Sudoku had no server before the hub. Something still needs to survive a closed tab, and still does — an in-progress board is not worth a round trip.
 
 **Rec:** `localStorage` holds the in-progress board and UI preferences only.
 Explicitly **not** best times or win counts, even though slice 1 could trivially
-write them. Those are `results` / `bests` rows in DO SQLite (§4.6), and writing
+write them. Those are `plays` / `play_results` rows in D1 (`../../architecture.md` §3.1), and writing
 them to `localStorage` first means slice 9 opens with a data migration and a
 "which copy is authoritative" question for no gain. Timing does not exist until
 slice 9.
 
-*Consequence, and the reason this is the recommendation rather than the obvious
-choice:* it makes R4 and R5 depend on the DO, so the timer slice sits after the
-storage foundation in §6 rather than before it. That ordering is the price of
-having exactly one authoritative copy of the only data in this project that
-cannot be regenerated. Reversing this answer moves the timer earlier and buys a
-migration.
+*Consequence:* R4 and R5 depend on the hub's database, so the timer phase sits
+after the storage foundation rather than before it. That ordering is the price
+of having exactly one authoritative copy of the only data here that cannot be
+regenerated — and it paid off at the hub pivot, which arrived with no results
+data anywhere and therefore no migration to perform.
 
-### Q8 — Custom domain?
+### Q8 — Custom domain? ✅ settled
 
-**Rec: `social-sudoko.<your-subdomain>.workers.dev`, no custom domain.** Free,
-instant, HTTPS, and it satisfies the PWA install requirement in slice 11. Adding
-a domain later is a dashboard action with no code impact, so this decision costs
-nothing to defer.
+`games.immotus.app`, the hub's address. The zone is already on Cloudflare, so
+adding it to the Worker is a dashboard action with no code impact
+(`../../architecture.md` §8, A3). Sudoku sits at `/sudoku/` under it.
 
 ### Q9 — PWA icons
 

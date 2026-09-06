@@ -1,6 +1,6 @@
 # Slice 3 — Difficulty tiers, the openness floor, and the picker
 
-Corresponds to `sudoku-design.md` §6 step 3, implementing §4.3. The tiering
+Corresponds to `../design.md` §6 step 3, implementing §4.3. The tiering
 mechanism R3 rests on, the floor that keeps every tier findable, and the UI that
 exposes both.
 
@@ -127,4 +127,4 @@ fails validation and is dropped rather than restored under a guess.
 
 Pencil marks, the solver, the technique library, hints, timing, stats, anything
 server-side. No technique rating: nothing in this project rates a puzzle by the
-hardest technique it needs, and `sudoku-design.md` §4.3 says why.
+hardest technique it needs, and `../design.md` §4.3 says why.

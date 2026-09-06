@@ -1,6 +1,6 @@
 # Slice 5 — Reduced logical solver
 
-Corresponds to `sudoku-design.md` §6 step 5, implementing §4.4. Core only: four
+Corresponds to `../design.md` §6 step 5, implementing §4.4. Core only: four
 technique functions and the loop that drives them. No UI, no hints, no library
 page, nothing that touches the DOM.
 
@@ -21,7 +21,7 @@ are different work against different failure modes — a wrong technique functio
 is a wrong answer on a seven-cell fixture, a wrong hint is a layout problem —
 and cutting between them is the only boundary in the pair that costs nothing.
 
-The solver does not tier puzzles. Difficulty is clue count (`sudoku-design.md`
+The solver does not tier puzzles. Difficulty is clue count (`../design.md`
 §4.3), settled in slice 3 without any of this. Nothing in this project asks how
 hard a clue set is, so nothing here returns a rating.
 
@@ -62,7 +62,7 @@ first, so nothing may be added to this module that breaks it.
 
 ## 4. Techniques
 
-Four, per `sudoku-design.md` §4.4. Each is a pure function with the same shape:
+Four, per `../design.md` §4.4. Each is a pure function with the same shape:
 
 ```js
 technique(geom, state) -> Step | null
@@ -100,7 +100,7 @@ the simplest move available rather than the cleverest.
 
 Each technique gets a hand-built clue set where it is the *only* technique that
 fires, and one where it must not fire. Written in the technique-library shape
-from the start (`sudoku-design.md` §4.7):
+from the start (`../design.md` §4.7):
 
 ```js
 { id, name, gridSize, cells, highlight, caption }
