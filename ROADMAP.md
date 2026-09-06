@@ -19,7 +19,10 @@ are:
   editor and the shelf the games sit on, drawing from `public/shared/` — the
   tokens, the thirty avatars, the profile rules, and the four calls the client
   makes.
-- 178 tests under `test/`, run by GitHub Actions on every push.
+- Pit's rules core — `public/pit/core/`, the whole trading game as pure
+  functions, playable by a test file and by nothing else. No bots, no driver,
+  no pixels.
+- 225 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
@@ -30,7 +33,8 @@ are:
 
 No Durable Object and no stored results. Profiles are made, renamed and
 re-faced from the hub; nothing a player would miss has been written anywhere
-yet.
+yet. Pit has rules and no interface — nothing under `public/pit/` is reachable
+from a browser, and the shelf does not offer it.
 
 ## The five things this is for
 
@@ -164,6 +168,12 @@ are a pure function of a view, and the client renders a view and sends actions,
 so all three run in a browser tab and the family can play against bots while the
 room is still unwritten. Phase 6 is then written against a rules module that
 exists rather than against `docs/gameroom.md` alone.
+
+**Session 1 is built.** `public/pit/core/` holds the deal, the offer board, the
+blind swap, the corner, the scoring and the confidentiality boundary, with the
+conservation and leak tests that `docs/pit/specs/session-1-rules-core.md` §8
+asks for. Session 2 — bots and the local driver — is next and is not yet
+spec'd.
 
 ### Phase 6 — GameRoom
 

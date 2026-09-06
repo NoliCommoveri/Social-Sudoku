@@ -6,8 +6,8 @@ the rest live only as a row in the table below.
 
 | # | Session | Spec | Cost | State |
 |---|---|---|---|---|
-| 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | Spec'd, not started |
-| 2 | Bots and the local driver | — | Medium | Not spec'd |
+| 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | ✅ Built |
+| 2 | Bots and the local driver | — | Medium | Next, not spec'd |
 | 3 | The table | — | Medium–Large | Not spec'd |
 | 4 | Round end, the session, the record | — | Medium | Not spec'd |
 
