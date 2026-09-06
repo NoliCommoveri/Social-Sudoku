@@ -8,7 +8,7 @@ the rest live only as a row in the table below.
 |---|---|---|---|---|
 | 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | ✅ Built |
 | 2 | Bots and the local driver | [`session-2-bots-and-the-local-driver.md`](session-2-bots-and-the-local-driver.md) | Medium | ✅ Built |
-| 3 | The table | — | Medium–Large | Next, not spec'd |
+| 3 | The stopped seat, and the table | [`session-3-the-table.md`](session-3-the-table.md) | Large | Next, spec'd |
 | 4 | Round end, the session, the record | — | Medium | Not spec'd |
 
 Sessions 1–4 are hub Phase 5 and leave a Pit that one person plays against bots
@@ -99,5 +99,8 @@ mode in `../design.md` §6 changes all three.
 Anything that can only be answered on a phone is an `S`* item in
 [`../../sudoku/specs/questions.md`](../../sudoku/specs/questions.md), with the
 person and the device named — not a line in a session's acceptance criteria.
-Pit's are written when sessions 3 and 4 are spec'd, because until the client is
-designed there is nothing specific to ask anybody to look at.
+The table's is **S10**, and it carries `../design.md` §2.6's timing checks as
+well as the layout ones — sixty seconds is tuned against bots and can only be
+judged against people. Session 4's is written when session 4 is spec'd, because
+until the reveal is designed there is nothing specific to ask anybody to look
+at.
