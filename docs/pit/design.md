@@ -120,22 +120,28 @@ Goodness therefore excludes both other berries; Joy and Gentleness may sit
 together, navy against lilac. The constraint is droppable above seven seats,
 where every fruit is in play by force.
 
-**Assets.** `public/pit/art/` holds two derived sets, both WebP, 788KB together:
+**Assets.** `public/pit/art/` holds two derived sets, both WebP, 836KB together:
 
 - `cards/<commodity>.webp` — the full illustration at 512×768, ~75KB each. Used
   where the picture is the point and there is room for it: the round-end reveal,
   the harvest celebration, the game's tile on the shelf. Never during live play;
   nine portrait cards do not lay out at 360px.
+- `cards/back.webp` — the one card back, 512×768, 42KB. Deep teal, gold frame,
+  a three-leaf emblem, and nothing that varies: it is the same image behind every
+  commodity, because a back that differed at all would be the leak §2.2 spends
+  the whole game preventing. Its teal is dark enough not to be read as
+  Self-Control's, which is the only tint in the set it comes near.
 - `fruit/<commodity>.webp` — a 172px circular crop of the card's corner roundel,
   fruit only, no text, transparent outside the circle, ~12KB each. This is the
   working asset: hand groups, count badges, offer rows, the target tracker. It
   carries no text, so §7 uses it unchanged.
 
-Both are generated from the nine 1024×1536 masters in `art-src/pit/`, which are
-in the repo and not served. The fruit crop is the square 172px on a side centred
+Both are generated from the ten 1024×1536 masters in `art-src/pit/` — nine faces
+and the back — which are in the repo and not served. The fruit crop is the square 172px on a side centred
 at (135, 98) in the master, circle-masked — that box clears the name band at the
 bottom of the roundel on all nine. The masters are kept because without them the
-crop box is irreversible and there is no CLI to redo it from.
+crop box is irreversible and there is no CLI to redo it from. The back has no
+derived crop; it is only downscaled.
 
 ### 2.2 Core loop
 
