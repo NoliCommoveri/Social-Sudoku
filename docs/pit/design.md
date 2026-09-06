@@ -13,7 +13,7 @@ of the generic `GameRoom` interface (`../gameroom.md`) at `games.immotus.app`.
 - Deployed under `games.immotus.app` as one game module inside a shared hub Worker (single `GameRoom` Durable Object class, rules supplied per-game). Stack in `../architecture.md`.
 - A separate simplified version for a 4- and 5-year-old is planned **last**, as its own mode. Notes in §7.
 - The horse breeding game is **not** part of this hub. It stays on its own subdomain.
-- IP: game mechanics are not copyrightable. Do not use the Parker Brothers name, its commodity set as a set, its card art, or the "Corner the Market" / Bull & Bear card naming and trade dress. Original theme required — see §2.1.
+- IP: game mechanics are not copyrightable. Do not use the Parker Brothers name, its commodity set as a set, its card art, or the "Corner the Market" / Bull & Bear card naming and trade dress. The theme is original — the Fruit of the Spirit, §2.1 — so nothing here touches that set.
 
 ---
 
@@ -74,19 +74,68 @@ interface GameRules<State, Action, View> {
 
 ### 2.1 Theme and commodities
 
-**Decided:** original theme, not the classic commodity set.
+**Decided:** the Fruit of the Spirit, Galatians 5:22–23. Nine commodities, one
+per virtue, each pictured as a fruit:
 
-Deck is *C* commodities where *C* = number of seats (humans + bots), 9 cards each. Four seats = 4 commodities = 36 cards, 9 dealt to each player.
-
-**Recommendation — pick one theme and stay with it**, because the little-kid version in §7 needs each commodity to be distinguishable by **shape + color alone, with no text**:
-
-| Option | Commodities | Notes |
+| Commodity | Fruit | Card tint |
 |---|---|---|
-| Space cargo | Ice, Ore, Fuel, Alloy, Seed, Data | Distinct icons, works for pre-readers |
-| Market stalls | Bread, Wool, Salt, Honey, Iron, Spice | Warm, familiar to young kids |
-| Elements | Fire, Water, Earth, Air, Light, Stone | Strongest color-coding, weakest theme fiction |
+| Love | Apple | `#c31412` |
+| Joy | Blackberry | `#498cde` |
+| Peace | Kiwi | `#9ec841` |
+| Patience | Orange | `#ed6600` |
+| Kindness | Strawberry | `#e94679` |
+| Goodness | Blueberry | `#823ea0` |
+| Faithfulness | Banana | `#f4c513` |
+| Gentleness | Grapes | `#c39de7` |
+| Self-Control | Pineapple | `#2ed6d9` |
 
-Point values per commodity should differ (classic Pit does this and it matters — it makes *which* commodity you chase a real decision, not just whichever you were dealt most of). Suggested spread: 55 / 60 / 65 / 70 / 75 / 80 for a six-commodity set, low value = more common target.
+The deck is *C* commodities where *C* = seats (humans + bots), 9 cards each.
+Four seats = four commodities = 36 cards, 9 dealt to each player. Nine
+commodities exist so that *C* can reach the largest table this family will ever
+sit; at a normal table most of the set is out of play.
+
+**Decided — the *C* in play are drawn at random per session**, not taken in
+verse order. Two things follow, and both are the point:
+
+- Every card gets used. A fixed order would leave Faithfulness through
+  Self-Control on the shelf at every four- or five-player game.
+- **Point values are assigned by rank within the drawn set, not fixed to a
+  fruit.** The cheapest commodity in play scores 55, then 60, 65, 70, 75, 80 and
+  so on in fives. No fruit is permanently the valuable one, which keeps the
+  scoring numbers from making a claim about the virtues they sit on.
+
+Values must differ — that is what makes *which* commodity you chase a decision
+rather than a readout of what you were dealt — and low value means the more
+common target, because the cheap corner is the reachable one.
+
+**Two fruits that look alike never deal together.** At the icon sizes §4 uses,
+these pairs are not safely distinguishable, and the draw rejects and redraws
+when it hits one:
+
+- Goodness (blueberry) with Gentleness (grapes) — two purple clusters.
+- Goodness (blueberry) with Joy (blackberry) — two dark berry clusters.
+- Love (apple) with Kindness (strawberry) — two red rounds.
+
+Goodness therefore excludes both other berries; Joy and Gentleness may sit
+together, navy against lilac. The constraint is droppable above seven seats,
+where every fruit is in play by force.
+
+**Assets.** `public/pit/art/` holds two derived sets, both WebP, 788KB together:
+
+- `cards/<commodity>.webp` — the full illustration at 512×768, ~75KB each. Used
+  where the picture is the point and there is room for it: the round-end reveal,
+  the harvest celebration, the game's tile on the shelf. Never during live play;
+  nine portrait cards do not lay out at 360px.
+- `fruit/<commodity>.webp` — a 172px circular crop of the card's corner roundel,
+  fruit only, no text, transparent outside the circle, ~12KB each. This is the
+  working asset: hand groups, count badges, offer rows, the target tracker. It
+  carries no text, so §7 uses it unchanged.
+
+Both are generated from the nine 1024×1536 masters in `art-src/pit/`, which are
+in the repo and not served. The fruit crop is the square 172px on a side centred
+at (135, 98) in the master, circle-masked — that box clears the name band at the
+bottom of the roundel on all nine. The masters are kept because without them the
+crop box is irreversible and there is no CLI to redo it from.
 
 ### 2.2 Core loop
 
@@ -122,9 +171,11 @@ Why this over continuous shouting: a faithful open-outcry version over mobile We
 
 **Revisit based on:** how the 11-year-old reacts the first time they miss a corner. This is a genuine coin flip and should be a room config toggle rather than a build-time choice.
 
+**Recommendation — the button says "Harvest!"** The classic name is off the table for the reason in §0, and cornering a market in Love is an odd sentence besides. Every card in §2.1 is fruit on the branch, so filling a basket is the frame the art already sets. *Alternative:* "Full Basket!", which is what the little ones will say anyway. *Revisit if:* the word does not survive first contact with the kids.
+
 ### 2.5 Scoring
 
-Corner scores the commodity's point value. Play to a target (500 is a reasonable default; make it configurable, since a family session length varies).
+A corner scores the commodity's point value, which §2.1 assigns by rank within the set drawn for the session. Play to a target (500 is a reasonable default; make it configurable, since a family session length varies).
 
 **Not in v1 — deferred, not rejected:**
 - Wild card (classic "Bull") — allows a corner with 8 + wild, at reduced value
@@ -166,8 +217,19 @@ Bots do not self-schedule. The room's tick calls `botAction()`; bot latency is i
 - Hand grouped by commodity, count badges, tap to select a block.
 - Offer board: one row per live offer, `name` + big count numeral, tap to accept, greyed if you can't match the count.
 - Persistent visible: your own counts per commodity, your target's progress toward 9.
-- Ring button, dark until legal.
+- Harvest button, dark until legal.
 - Round-end reveal of everyone's final hands — this is where the count history retroactively becomes readable and is a large part of the fun.
+
+**Which art goes where.** Live play uses `fruit/` and nothing else: the circular
+crop reads at 40px, carries no text, and nine of them fit across a 360px phone.
+The full `cards/` illustration appears in three places only — the round-end
+reveal, the harvest celebration, and the game's tile on the hub shelf. A hand of
+nine full cards is not a layout that exists at this width, so nothing should be
+designed as though it were.
+
+Commodity identity is carried by the fruit and by the tint behind it, per the
+avatar rule in `../design-language.md` §2 — the name is a caption, never the
+channel. That is what the exclusion pairs in §2.1 protect.
 
 **The base-path warning that was here does not apply.** There is no bundler —
 `public/pit/` is plain ES modules with relative paths and serves at `/pit/`
@@ -177,10 +239,11 @@ because that is where the files are. See `../architecture.md` §2.1.
 
 ## 5. Open questions for the user
 
-1. Which theme (§2.1)?
-2. Manual ring or auto-corner (§2.4)?
-3. Target score, and roughly how long a session should run?
-4. Should bots be present by default, or only when seats are short?
+1. Manual ring or auto-corner (§2.4)?
+2. Target score, and roughly how long a session should run?
+3. Should bots be present by default, or only when seats are short?
+4. ~~Which theme?~~ Settled: the Fruit of the Spirit, nine commodities drawn
+   *C* at a time with values by rank. §2.1.
 5. ~~Cross-game standings at the hub now, or leave identity stubbed for v1?~~
    Settled: identity and standings land in Phases 2–3, well before Pit. Pit
    reads them rather than stubbing anything. See `../identity-and-stats.md`.
@@ -204,9 +267,13 @@ Each step should be playable before the next starts.
 
 Not a difficulty slider. Separate mode, same room infrastructure.
 
-- **No text anywhere.** Commodities are shape + color. Counts are pip dots, not numerals.
+- **No text anywhere.** Commodities are shape + color, which the `fruit/` crops
+  in §2.1 already are — they were cut above the name band precisely so this mode
+  needs no second asset path.
 - **Tap only.** Tap commodity, tap count, tap offer.
-- Smaller: 3–4 commodities, 5-card corners, 4–6 card hands.
+- Smaller: 3–4 commodities, 5-card corners, 4–6 card hands. The draw is the
+  same one as §2.1, so the exclusion pairs carry over and matter more here: a
+  4-year-old telling a blueberry from a grape at 64px is the whole mode.
 - Slower tick, and a helper that highlights offers matching their target.
 
 Mixed tables with the older kids were discussed and set aside as the harder problem. If revisited, the approach that seemed most promising was asymmetric win conditions on a shared deck — 5-card corners for the little ones, 9 for adults — plus the helper, rather than any speed handicap, since visible speed handicaps get noticed and resented.
