@@ -18,28 +18,31 @@ are:
 - In-progress boards saved per size and tier in `localStorage`.
 - The hub at `public/index.html`: a passphrase gate, the picker, the profile
   editor and the shelf the games sit on, drawing from `public/shared/` — the
-  tokens, the thirty avatars, the profile rules, and the four calls the client
+  tokens, the thirty avatars, the profile rules, and the six calls the client
   makes.
-- Pit at `/pit/`: the rules core, the bots, the local driver, the table and the
-  round-end reveal — `public/pit/`. One person picks how many bots sit down and
-  plays rounds against them on a phone. A seat left alone is taken over by a bot
-  sixty seconds later and reclaimed by a tap. A corner opens the reveal — the
-  card in full art, every seat's final hand and the counts it offered — and
-  reaching the target draws the standings.
-- 316 tests under `test/`, run by GitHub Actions on every push.
+- Pit at `/pit/`, on the shelf beside sudoku: the rules core, the bots, the
+  local driver, the table, the round-end reveal and the record — `public/pit/`.
+  One person picks how many bots sit down and plays rounds against them on a
+  phone. A seat left alone is taken over by a bot sixty seconds later and
+  reclaimed by a tap. A corner opens the reveal — the card in full art, every
+  seat's final hand and the counts it offered — and reaching the target draws
+  the standings and says whether the session was written down.
+- 328 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
   and the admin page at `/admin` that applies it, seeds it, backs it up, erases
   it and restores it — `worker/`.
-- Identity: the gate at `/gate`, two signed cookies, and the four calls behind
+- Identity: the gate at `/gate`, two signed cookies, and the six calls behind
   them — `worker/auth.js`, `worker/gate.js`, `worker/api.js`.
+- The record's write path: `POST /api/plays` opens a row when a game is dealt
+  and `POST /api/plays/:id/end` closes it, with a result or without one. It is
+  game-agnostic; Pit is the only caller so far.
 
-No Durable Object and no stored results. Profiles are made, renamed and
-re-faced from the hub; nothing a player would miss has been written anywhere
-yet. Pit is played by typing its address: the `plays` row and the game's tile on
-the shelf are the rest of session 4, and until that tile exists nothing on the
-front page links to it.
+No Durable Object, and nothing reads the record yet. Profiles are made, renamed
+and re-faced from the hub. A finished Pit session writes a `plays` row and one
+`play_results` row for the human seat, and an abandoned one writes the row with
+no result — but until Phase 3 the only way to read either is `/admin`'s export.
 
 ## The five things this is for
 
@@ -151,11 +154,11 @@ Delivers **H4**. Per-game and overall views, the play log on the front page, and
 sudoku solo writing a row when a board is finished. This is the first phase
 where the site does something the standalone sudoku could not.
 
-**The write path lands earlier, in Pit session 4.** Pit is the game that reaches
-an ending first, so `POST /api/plays` and `POST /api/plays/:id/end` are built
-there — game-agnostic, and sudoku's call through them is two lines. What is left
-here is the reading: the log, the per-game views, the overall tile, and
-`docs/identity-and-stats.md` §5's open item I1, which is what the front page
+**The write path landed earlier, in Pit session 4.** Pit is the game that
+reaches an ending first, so `POST /api/plays` and `POST /api/plays/:id/end` are
+built and in use — game-agnostic, and sudoku's call through them is two lines.
+What is left here is the reading: the log, the per-game views, the overall tile,
+and `docs/identity-and-stats.md` §5's open item I1, which is what the front page
 shows.
 
 Absorbs the old slice 9. Medium.
@@ -201,19 +204,22 @@ makes, which is what keeps `table.js` down to creating elements and reporting
 taps. Offering and accepting are the same two-tap mechanism against the hand,
 because the hand is the only place a commodity is ever named.
 
-**Session 4 is half built**, and is
+**Session 4 is built**, and is
 [`docs/pit/specs/session-4-round-end-and-the-record.md`](docs/pit/specs/session-4-round-end-and-the-record.md).
-The reveal, the ending and what the rules module owed them — §2, §3 and §4 —
-are in the tree: the full card art, every seat's final hand and the counts it
-offered, the standings with ranks and corners, `state.corners` as a session
-total, and `onComplete` as the driver's seventh method, which is how the client
-gets ranks without importing the rules module.
+The reveal, the ending and what the rules module owed them — §2, §3 and §4 — are
+the full card art, every seat's final hand and the counts it offered, the
+standings with ranks and corners, `state.corners` as a session total, and
+`onComplete` as the driver's seventh method, which is how the client gets ranks
+without importing the rules module.
 
-**What is left is §5 and §6**, and they are the next session, Medium: the write
-path — `POST /api/plays` opening a row at the deal and `POST /api/plays/:id/end`
-closing it, so an abandoned game is a row with no result — and the game's tile on
-the hub shelf. The ending screen already says whether the session was written
-down; until the endpoint exists it says *Nothing to save.*
+The record — §5 and §6 — is `worker/api.js`'s two endpoints and the two calls in
+`public/shared/api.js` that reach them. They are the only calls in that file that
+do not send a 401 to the gate: a cookie that expired mid-session must not throw
+away the round in progress, so the failure reaches the ending screen as a
+sentence instead. A row opens at the deal carrying the table as it was dealt, and
+closes when the session ends — with the human seat's result, or with none, which
+is what an abandoned game looks like. Pit's tile is on the shelf and the front
+page links to it.
 
 ### Phase 6 — GameRoom
 

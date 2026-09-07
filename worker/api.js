@@ -4,11 +4,14 @@
 //   POST  /api/players       create one
 //   PATCH /api/players/:id   rename one, or change its face
 //   POST  /api/who           pick a profile on this device, or clear it
+//   POST  /api/plays         open a row when a game is dealt
+//   POST  /api/plays/:id/end close it, with a result or without one
 //
 // Everything is behind the gate, and `who` is only ever set from a signed
 // cookie this Worker issued. That is the difference between "the client says it
-// is player 3" and "the server issued this", and it is what will stop a stray
-// script writing a play result as somebody else in Phase 3
+// is player 3" and "the server issued this", and it is what stops a stray
+// script writing a play result as somebody else: the `player_id` on a result
+// comes from that cookie and never from the body
 // (docs/identity-and-stats.md §3.3).
 //
 // **There are no locks inside the gate.** Anybody through the door can edit
@@ -17,6 +20,11 @@
 // actually happens (docs/identity-and-stats.md §1). The deterrent against a
 // sibling renaming their brother is the same one that works at a physical board
 // game.
+//
+// The record is game-agnostic and stays that way: `game` and `mode` are slugs
+// and are not checked against a list, because public/shared/games.js is the
+// only place a game is named to the hub (H2). A Worker holding a second list
+// would be a third game that touches two files instead of one.
 //
 // The rules a name and a face have to pass live in public/shared/profile.js, so
 // the editor can say "somebody already has that face" without a round trip and
@@ -147,6 +155,17 @@ export async function handleApi(request, env, pathname) {
     const id = decodeURIComponent(pathname.slice('/api/players/'.length));
     if (request.method !== 'PATCH') return json({ error: 'method' }, 405, { allow: 'PATCH' });
     return editPlayer(request, env.DB, id);
+  }
+
+  if (pathname === '/api/plays') {
+    if (request.method !== 'POST') return json({ error: 'method' }, 405, { allow: 'POST' });
+    return startPlay(request, env.DB);
+  }
+
+  if (pathname.startsWith('/api/plays/') && pathname.endsWith('/end')) {
+    const id = decodeURIComponent(pathname.slice('/api/plays/'.length, -'/end'.length));
+    if (request.method !== 'POST') return json({ error: 'method' }, 405, { allow: 'POST' });
+    return endPlay(request, env, env.DB, id);
   }
 
   if (pathname === '/api/who') {
@@ -280,4 +299,176 @@ async function pickWho(request, env, db) {
   return json({ me: id }, 200, {
     'set-cookie': cookieHeader(WHO_COOKIE, await whoCookie(String(env.SESSION_SECRET), id)),
   });
+}
+
+/* ------------------------------------------------------------- the record */
+
+/** A game slug or a mode slug. Short, lowercase, and safe in a URL and a query. */
+const SLUG = /^[a-z][a-z0-9-]{0,31}$/;
+
+/** What a game may say about itself, and what it may say about how it went. */
+const CONFIG_MAX = 4096;
+const DETAIL_MAX = 2048;
+
+/**
+ * Opening a row when the cards are dealt.
+ *
+ *   { game, mode, config } -> { id, started_at }
+ *
+ * **The Worker chooses the id and the clock.** A client-supplied id is a client
+ * that can overwrite somebody else's row, and a client-supplied timestamp is a
+ * kid's phone clock in the play log. Both are ignored if a body carries them.
+ *
+ * `session_id` stays null: a Pit session is one play, not one play per round. A
+ * round is twenty seconds, and a row per round would bury the log in a game the
+ * family plays for an hour.
+ *
+ * Nothing here checks that a game finished, or that it was ever played. A row
+ * with a `started_at` and no `ended_at` is a phone that was locked mid-game, and
+ * that is a true thing worth being able to see (docs/identity-and-stats.md §4.1).
+ *
+ * @param {Request} request
+ * @param {D1Database} db
+ */
+async function startPlay(request, db) {
+  const body = await readJson(request);
+  if (!body) return json({ error: 'bad_body' }, 400);
+
+  const game = String(body.game ?? '');
+  const mode = String(body.mode ?? '');
+  if (!SLUG.test(game)) return refuse({ field: 'game', message: 'A game is a short lowercase name, like "pit".' });
+  if (!SLUG.test(mode)) return refuse({ field: 'mode', message: 'A mode is a short lowercase name, like "bots".' });
+
+  let configJson = null;
+  if (body.config !== undefined && body.config !== null) {
+    configJson = JSON.stringify(body.config);
+    if (configJson.length > CONFIG_MAX) {
+      return refuse({ field: 'config', message: `That is more than ${CONFIG_MAX} characters of config.` });
+    }
+  }
+
+  const play = { id: crypto.randomUUID(), started_at: Date.now() };
+  await db
+    .prepare('INSERT INTO plays (id, session_id, game, mode, config_json, started_at) VALUES (?, ?, ?, ?, ?, ?)')
+    .bind(play.id, null, game, mode, configJson, play.started_at)
+    .run();
+
+  return json(play, 201);
+}
+
+/**
+ * What a result has to be before it goes in a table Phase 3 has to render:
+ * numbers that are numbers, slugs, and a detail that fits.
+ *
+ * Nothing checks that a score of 300 was earned. The deterrent against a
+ * 12-year-old posting a fake result is that the family can see the log, which is
+ * the same deterrent that works at a physical board game
+ * (docs/identity-and-stats.md §4.1). What is enforced is authorship and shape.
+ *
+ * @param {Record<string, unknown>} result
+ * @returns {{ field: string, message: string } | { row: { rank: number | null,
+ *   outcome: string, value: number | null, unit: string | null, detail: string | null } }}
+ */
+function resultRow(result) {
+  const outcome = String(result.outcome ?? '');
+  if (!SLUG.test(outcome)) {
+    return { field: 'outcome', message: 'An outcome is a short lowercase name, like "won".' };
+  }
+
+  const rank = result.rank === undefined || result.rank === null ? null : Number(result.rank);
+  if (rank !== null && !Number.isInteger(rank)) {
+    return { field: 'rank', message: 'A rank is a whole number.' };
+  }
+
+  const value = result.value === undefined || result.value === null ? null : Number(result.value);
+  if (value !== null && !Number.isFinite(value)) {
+    return { field: 'value', message: 'A value is a number.' };
+  }
+
+  const unit = result.unit === undefined || result.unit === null ? null : String(result.unit);
+  if (unit !== null && !SLUG.test(unit)) {
+    return { field: 'unit', message: 'A unit is a short lowercase name, like "points".' };
+  }
+
+  let detail = null;
+  if (result.detail !== undefined && result.detail !== null) {
+    detail = JSON.stringify(result.detail);
+    if (detail.length > DETAIL_MAX) {
+      return { field: 'detail', message: `That is more than ${DETAIL_MAX} characters of detail.` };
+    }
+  }
+
+  return { row: { rank, outcome, value, unit, detail } };
+}
+
+/**
+ * Closing the row, with a result or without one.
+ *
+ *   { result: { rank, outcome, value, unit, detail } | null } -> { ok: true }
+ *
+ * `result: null` is the abandon: the row gets an `ended_at` and no
+ * `play_results` row, which is how "we started six and finished two" stays a
+ * true sentence.
+ *
+ * **`player_id` comes from the `who` cookie, never from the body.** That is what
+ * the signature on the cookie is for, and a device with nobody picked cannot
+ * write a result at all.
+ *
+ * Both statements are idempotent and go in one `batch()`, because a phone on bad
+ * wifi will retry: the update only fires while `ended_at` is null, and the
+ * insert ignores a row that is already there. Ending twice leaves one row with
+ * one `ended_at`.
+ *
+ * **Only the human's row is written.** `play_results.player_id` references
+ * `players`, and a bot is not a player. The bots' scores travel in `detail_json`,
+ * which is where the client puts them. Phase 7 is where several seats end one
+ * play, and that is a loop over these same two statements.
+ *
+ * @param {Request} request
+ * @param {{ SESSION_SECRET?: string }} env
+ * @param {D1Database} db
+ * @param {string} id
+ */
+async function endPlay(request, env, db, id) {
+  const body = await readJson(request);
+  if (!body) return json({ error: 'bad_body' }, 400);
+
+  const play = await db.prepare('SELECT id FROM plays WHERE id = ?').bind(id).first();
+  if (!play) return json({ error: 'no_such_play', id }, 404);
+
+  const statements = [
+    db.prepare('UPDATE plays SET ended_at = ? WHERE id = ? AND ended_at IS NULL').bind(Date.now(), id),
+  ];
+
+  const result = body.result === undefined ? null : body.result;
+  if (result !== null) {
+    if (typeof result !== 'object') {
+      return refuse({ field: 'result', message: 'A result is an object, or null for a game nobody finished.' });
+    }
+
+    const players = await livePlayers(db);
+    const me = await currentWho(request, env, players);
+    if (me === null) {
+      return json(
+        { error: 'nobody', detail: 'Nobody is picked on this device, so there is no one to write this down for.' },
+        403,
+      );
+    }
+
+    const checked = resultRow(/** @type {Record<string, unknown>} */ (result));
+    if ('field' in checked) return refuse(checked);
+
+    const { rank, outcome, value, unit, detail } = checked.row;
+    statements.push(
+      db
+        .prepare(
+          `INSERT OR IGNORE INTO play_results (play_id, player_id, rank, outcome, value, unit, detail_json)
+             VALUES (?, ?, ?, ?, ?, ?, ?)`,
+        )
+        .bind(id, me, rank, outcome, value, unit, detail),
+    );
+  }
+
+  await db.batch(statements);
+  return json({ ok: true });
 }
