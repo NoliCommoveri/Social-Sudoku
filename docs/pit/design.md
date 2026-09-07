@@ -93,6 +93,12 @@ per virtue, each pictured as a fruit:
 | Gentleness | Grapes | `#c39de7` |
 | Self-Control | Pineapple | `#2ed6d9` |
 
+**The virtue is the commodity's name; the fruit is only what its picture
+shows.** Every label a player reads — the hand, an offer row, a receipt, the
+round-end panel — says *Love*, not *Apple*. The fruit column is what the art was
+drawn from and what the lookalike exclusions below are reasoned about, and it
+belongs to the picture, never to the text.
+
 The deck is *C* commodities where *C* = seats (humans + bots), 9 cards each.
 Four seats = four commodities = 36 cards, 9 dealt to each player. Nine
 commodities exist so that *C* can reach the largest table this family will ever

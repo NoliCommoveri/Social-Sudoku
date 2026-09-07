@@ -304,7 +304,7 @@ test('an accepted trade produces the line a player reads it off', () => {
 
   const line = present(after, { ...idle, receipt }, 300).line;
   assert.equal(line.kind, 'receipt');
-  assert.equal(line.text, `${COMMODITIES[offered].fruit} ×2 for ${COMMODITIES[paid].fruit} ×2`);
+  assert.equal(line.text, `${COMMODITIES[offered].name} ×2 for ${COMMODITIES[paid].name} ×2`);
 });
 
 /* --------------------------------------------------------- the idle chip */

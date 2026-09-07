@@ -102,7 +102,7 @@ export function createTable(root, { faces, onTarget }) {
       node.style.setProperty('--tint', slot.tint);
       const art = el('img', 'slot-art');
       art.src = slot.art;
-      art.alt = slot.fruit;
+      art.alt = slot.name;
       art.decoding = 'async';
       const count = el('span', 'slot-count', String(slot.count));
       const ring = el('span', 'slot-ring');
@@ -178,7 +178,7 @@ export function createTable(root, { faces, onTarget }) {
       row.node.style.order = String(index);
       row.count.textContent = String(offer.count);
       // Only ever your own, and only because it is yours.
-      row.what.textContent = offer.fruit ?? '';
+      row.what.textContent = offer.commodityName ?? '';
       row.left.textContent = String(Math.ceil(offer.msLeft / 1000));
       row.node.classList.toggle('is-mine', offer.mine);
       row.node.classList.toggle('is-grey', offer.greyed);
@@ -243,12 +243,12 @@ export function createTable(root, { faces, onTarget }) {
       const art = parts.panel.querySelector('.panel-art');
       if (art.getAttribute('src') !== panel.art) {
         art.src = panel.art;
-        art.alt = panel.fruit;
+        art.alt = panel.commodityName;
       }
       parts.panel.style.setProperty('--tint', panel.tint);
       parts.panel.querySelector('.panel-who').textContent = panel.yours
-        ? `You cornered ${panel.fruit}`
-        : `${panel.name} cornered ${panel.fruit}`;
+        ? `You harvested ${panel.commodityName}`
+        : `${panel.name} harvested ${panel.commodityName}`;
       parts.panel.querySelector('.panel-note').textContent = panel.note;
       parts.panel.querySelector('.panel-next').disabled = !panel.canReady;
       parts.panel.querySelector('.panel-next').textContent = panel.ready ? 'Waiting…' : 'Next round';

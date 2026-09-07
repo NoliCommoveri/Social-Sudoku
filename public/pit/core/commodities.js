@@ -17,6 +17,10 @@ export const VALUE_STEP = 5;
 
 // Keyed by the basename of its art. `art/fruit/<key>.webp` and
 // `art/cards/<key>.webp` resolve with no mapping table in between.
+//
+// `name` is what a player is ever shown; the commodities are the nine virtues.
+// `fruit` names what the picture on that card is, which the art was drawn from
+// and which the exclusions in §2.1 are reasoned about — it is never a label.
 export const COMMODITIES = {
   love: { name: 'Love', fruit: 'Apple', tint: '#c31412' },
   joy: { name: 'Joy', fruit: 'Blackberry', tint: '#498cde' },

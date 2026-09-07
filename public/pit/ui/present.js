@@ -40,7 +40,6 @@ export const RECEIPT_MS = 3200;
 const WARN_FRACTION = 0.5;
 
 const nameOf = (commodity) => COMMODITIES[commodity].name;
-const fruitOf = (commodity) => COMMODITIES[commodity].fruit;
 
 /** `art/fruit/<key>.webp` resolves from `/pit/` with no mapping table. */
 export const artFor = (commodity) => `art/fruit/${commodity}.webp`;
@@ -262,7 +261,6 @@ export function present(view, ui, now) {
     return {
       commodity,
       name: nameOf(commodity),
-      fruit: fruitOf(commodity),
       tint: COMMODITIES[commodity].tint,
       art: artFor(commodity),
       value: view.values[commodity],
@@ -287,7 +285,7 @@ export function present(view, ui, now) {
       mine: offer.mine,
       // Your own offer's commodity is yours to see, and only yours.
       commodity: offer.mine && view.you.offer ? view.you.offer.commodity : null,
-      fruit: offer.mine && view.you.offer ? fruitOf(view.you.offer.commodity) : null,
+      commodityName: offer.mine && view.you.offer ? nameOf(view.you.offer.commodity) : null,
       expiresAt: offer.expiresAt,
       msLeft: Math.max(0, offer.expiresAt - now),
       // Read from the view, never recomputed: the rule lives on the far side of
@@ -362,21 +360,21 @@ function lineFor(view, mode, lost, yours, ui) {
   if (lost === 'offer') return { kind: 'gone', text: 'Gone' };
   if (lost === 'cards') return { kind: 'gone', text: 'Gone' };
 
-  if (mode.mode === 'compose') return { kind: 'compose', text: `How many ${fruitOf(mode.commodity)}?` };
+  if (mode.mode === 'compose') return { kind: 'compose', text: `How many ${nameOf(mode.commodity)} cards?` };
   if (mode.mode === 'pay') return { kind: 'pay', text: "Tap what you'll trade" };
 
   if (ui.refusal && REFUSALS[ui.refusal]) return { kind: 'refusal', text: REFUSALS[ui.refusal] };
 
   if (ui.receipt) {
     const { got, gave } = ui.receipt;
-    if (got && gave) return { kind: 'receipt', text: `${fruitOf(got.commodity)} ×${got.count} for ${fruitOf(gave.commodity)} ×${gave.count}` };
-    if (got) return { kind: 'receipt', text: `${fruitOf(got.commodity)} ×${got.count}` };
-    if (gave) return { kind: 'receipt', text: `Offered ${fruitOf(gave.commodity)} ×${gave.count}` };
+    if (got && gave) return { kind: 'receipt', text: `${nameOf(got.commodity)} ×${got.count} for ${nameOf(gave.commodity)} ×${gave.count}` };
+    if (got) return { kind: 'receipt', text: `${nameOf(got.commodity)} ×${got.count}` };
+    if (gave) return { kind: 'receipt', text: `Offered ${nameOf(gave.commodity)} ×${gave.count}` };
   }
 
   if (view.phase === 'roundEnd') return { kind: 'idle', text: '' };
   if (view.you.offer) return { kind: 'idle', text: 'On the table — tap it to take it back' };
-  return { kind: 'idle', text: 'Tap a fruit to offer it' };
+  return { kind: 'idle', text: 'Tap a card to offer it' };
 }
 
 /**
@@ -392,7 +390,7 @@ function roundEndFor(view) {
     name: seat ? seat.name : playerId,
     yours: playerId === view.you.playerId,
     commodity,
-    fruit: fruitOf(commodity),
+    commodityName: nameOf(commodity),
     art: artFor(commodity),
     tint: COMMODITIES[commodity].tint,
     value,
