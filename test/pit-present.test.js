@@ -12,11 +12,12 @@ import assert from 'node:assert/strict';
 
 import { HAND, MAX_OFFER, COMMODITIES } from '../public/pit/core/commodities.js';
 import {
-  init, apply, validate, view, tick,
+  init, apply, validate, view, tick, isComplete,
   minPlayers, maxPlayers, IDLE_TAKEOVER_MS, OFFER_TTL_MS,
 } from '../public/pit/core/rules.js';
 import {
-  idle, onTap, onInteraction, present, receiptFor, artFor, PRESENT_THROTTLE_MS,
+  idle, onTap, onInteraction, present, receiptFor, endingFor, artFor, cardFor,
+  PRESENT_THROTTLE_MS,
 } from '../public/pit/ui/present.js';
 
 const table = (n) => Array.from({ length: n }, (_, i) => ({ playerId: `p${i}`, name: `P${i}` }));
@@ -393,6 +394,186 @@ test('the round-end panel says what was harvested, and why a zero is a zero', ()
   assert.equal(dry.forfeited, true);
   assert.equal(dry.value, 0);
   assert.equal(dry.note, 'no points — a bot was playing');
+});
+
+/* ---------------------------------------------------------- the reveal */
+
+/** A corner for one seat, leaving everybody else's hand and the history alone. */
+const stack = (state, playerId) => ({
+  ...state,
+  hands: { ...state.hands, [playerId]: { [state.commodities[0]]: HAND } },
+  offers: [],
+});
+
+test('the reveal is every seat, in seat order, holding its own final hand', () => {
+  const state = seeded(oneEach(init(table(4), {}, 'reveal')), 0);
+  const done = act(state, 'p0', { type: 'harvest' }, 1000);
+  const v = view(done, 'p2');
+  const panel = present(v, idle, 1000).roundEnd;
+
+  assert.deepEqual(panel.seats.map((seat) => seat.playerId), v.seats.map((seat) => seat.playerId));
+  assert.equal(panel.card, cardFor(panel.commodity));
+  assert.equal(panel.headline, 'P0 filled the basket');
+
+  for (const seat of panel.seats) {
+    assert.deepEqual(seat.hand.map((slot) => slot.commodity), v.commodities, 'not the hand’s order');
+    assert.deepEqual(
+      seat.hand.map((slot) => slot.count),
+      v.commodities.map((c) => v.reveal[seat.playerId][c] ?? 0),
+      'a block is not showing that seat’s hand',
+    );
+    // Zeros included and greyed rather than dropped: position is how a
+    // pre-reader finds a thing.
+    assert.ok(seat.hand.some((slot) => slot.count === 0), 'a zero was dropped');
+    assert.deepEqual(seat.hand.map((slot) => slot.art), v.commodities.map(artFor));
+    assert.equal(seat.score, v.seats.find((row) => row.playerId === seat.playerId).score);
+  }
+
+  assert.equal(panel.seats.find((seat) => seat.playerId === 'p2').you, true);
+  assert.equal(panel.seats.filter((seat) => seat.you).length, 1);
+
+  // The nine that ended the round, and nothing else, carries the ring.
+  const ringed = panel.seats.flatMap(
+    (seat) => seat.hand.filter((slot) => slot.ringed).map((slot) => [seat.playerId, slot.commodity]),
+  );
+  assert.deepEqual(ringed, [['p0', panel.commodity]]);
+});
+
+test('only the seat that ended the round has anything added to its score', () => {
+  const state = seeded(oneEach(init(table(4), {}, 'plus')), 0);
+  const v = view(act(state, 'p0', { type: 'harvest' }, 1000), 'p0');
+  const panel = present(v, idle, 1000).roundEnd;
+
+  const notes = panel.seats.map((seat) => [seat.playerId, seat.note, seat.harvester]);
+  assert.deepEqual(notes, [
+    ['p0', `+${v.values[panel.commodity]}`, true],
+    ['p1', null, false],
+    ['p2', null, false],
+    ['p3', null, false],
+  ]);
+  assert.equal(panel.headline, 'You filled the basket');
+
+  // A forfeited harvester keeps the sentence and gets no plus, on the header
+  // and on its own block: a zero with no explanation is the bug report that
+  // follows.
+  const taken = tick(state, IDLE_TAKEOVER_MS).state;
+  const dry = view(act(taken, 'p0', { type: 'harvest' }, IDLE_TAKEOVER_MS + 1), 'p0');
+  const forfeited = present(dry, idle, IDLE_TAKEOVER_MS + 1).roundEnd;
+  assert.equal(forfeited.note, 'no points — a bot was playing');
+  assert.equal(forfeited.seats.find((seat) => seat.harvester).note, forfeited.note);
+  assert.equal(forfeited.seats.find((seat) => seat.harvester).score, 0);
+});
+
+test('a seat’s counts are its offers this round, in order, and nothing else', () => {
+  let state = base();
+  const commodity = view(state, 'p1').commodities.find((c) => state.hands.p1[c] >= 3);
+  let now = 0;
+  const offer = (count) => {
+    state = act(state, 'p1', { type: 'offer', commodity, count }, (now += 100));
+    state = act(state, 'p1', { type: 'withdraw' }, (now += 100));
+  };
+  for (const count of [3, 3, 2]) offer(count);
+
+  const v = view(act(stack(state, 'p0'), 'p0', { type: 'harvest' }, (now += 100)), 'p0');
+  const panel = present(v, idle, now).roundEnd;
+  const seat = (id) => panel.seats.find((row) => row.playerId === id);
+
+  assert.deepEqual(seat('p1').counts, [3, 3, 2]);
+  assert.equal(seat('p1').more, false);
+  // A seat that offered nothing shows nothing rather than an empty label.
+  assert.deepEqual(seat('p2').counts, []);
+  assert.equal(seat('p2').more, false);
+  // No commodity of anybody else's is anywhere in it: history carries counts
+  // and player ids, permanently.
+  assert.equal(JSON.stringify(panel.seats.map((row) => row.counts)).includes(commodity), false);
+});
+
+test('a busy seat’s counts stop at six and say there were more', () => {
+  let state = base();
+  const commodity = view(state, 'p1').commodities.find((c) => state.hands.p1[c] >= 1);
+  let now = 0;
+  for (let i = 0; i < 8; i++) {
+    state = act(state, 'p1', { type: 'offer', commodity, count: 1 }, (now += 100));
+    state = act(state, 'p1', { type: 'withdraw' }, (now += 100));
+  }
+  const v = view(act(stack(state, 'p0'), 'p0', { type: 'harvest' }, (now += 100)), 'p0');
+  const seat = present(v, idle, now).roundEnd.seats.find((row) => row.playerId === 'p1');
+
+  assert.deepEqual(seat.counts, [1, 1, 1, 1, 1, 1]);
+  assert.equal(seat.more, true);
+});
+
+test('the counts are this round’s, so the next deal starts them again', () => {
+  let state = base();
+  const commodity = view(state, 'p1').commodities.find((c) => state.hands.p1[c] >= 2);
+  state = act(state, 'p1', { type: 'offer', commodity, count: 2 }, 100);
+  state = act(state, 'p1', { type: 'withdraw' }, 200);
+  state = act(stack(state, 'p0'), 'p0', { type: 'harvest' }, 300);
+  for (const seat of state.seats) state = apply(state, seat.playerId, { type: 'ready' }, 400).state;
+
+  const v = view(act(stack(state, 'p0'), 'p0', { type: 'harvest' }, 500), 'p0');
+  const panel = present(v, idle, 500).roundEnd;
+  assert.equal(v.round, 2);
+  assert.deepEqual(panel.seats.find((row) => row.playerId === 'p1').counts, []);
+});
+
+/* ---------------------------------------------------------- the ending */
+
+/** A finished session, ranked by the rules module rather than by this file. */
+function finished(scores, corners) {
+  const state = init(table(4), {}, 'ending');
+  return isComplete({ ...state, phase: 'over', scores, corners });
+}
+
+test('the ending names the winner, and names you when it is you', () => {
+  const outcome = finished({ p0: 300, p1: 120, p2: 60, p3: 0 }, { p0: 3, p1: 1, p2: 0, p3: 0 });
+
+  assert.equal(endingFor(outcome, 'saved', 'p0').headline, 'You won.');
+  assert.equal(endingFor(outcome, 'saved', 'p2').headline, 'P0 won.');
+
+  const rows = endingFor(outcome, 'saved', 'p2').rows;
+  assert.deepEqual(rows.map((row) => row.playerId), ['p0', 'p1', 'p2', 'p3']);
+  assert.deepEqual(rows.map((row) => row.rank), [1, 2, 3, 4]);
+  assert.deepEqual(rows.map((row) => row.baskets), ['3 baskets', '1 basket', '', '']);
+  assert.deepEqual(rows.map((row) => row.you), [false, false, true, false]);
+  assert.deepEqual(rows.map((row) => row.score), [300, 120, 60, 0]);
+});
+
+test('a tie shares first place and both rows read as rank 1', () => {
+  const outcome = finished({ p0: 300, p1: 300, p2: 120, p3: 0 }, { p0: 1, p1: 2, p2: 0, p3: 0 });
+  const rows = endingFor(outcome, 'saved', 'p3').rows;
+
+  assert.deepEqual(rows.filter((row) => row.rank === 1).map((row) => row.playerId), ['p0', 'p1']);
+  assert.deepEqual(rows.map((row) => row.rank), [1, 1, 3, 4]);
+  // Either of them is the winner, and being one of them is still winning.
+  assert.equal(endingFor(outcome, 'saved', 'p1').headline, 'You won.');
+  assert.equal(endingFor(outcome, 'saved', 'p3').headline, 'P0 won.');
+});
+
+test('an abandoned session has standings and no ranks', () => {
+  // One seat proposes and another seconds it; at a table of bots the bots do
+  // the seconding, which is why one press ends it in `app.js`.
+  const proposed = act(base(), 'p1', { type: 'abandon' }, 500);
+  const v = view(act(proposed, 'p0', { type: 'abandon' }, 600), 'p0');
+  assert.equal(v.phase, 'abandoned');
+
+  const ending = endingFor({ abandoned: true, seats: v.seats }, 'none', 'p0');
+  assert.equal(ending.headline, 'Game ended.');
+  assert.equal(ending.note, 'Nothing to save.');
+  assert.deepEqual(ending.rows.map((row) => row.rank), [null, null, null, null]);
+  assert.deepEqual(ending.rows.map((row) => row.baskets), ['', '', '', '']);
+  assert.deepEqual(ending.rows.map((row) => row.name), ['P0', 'P1', 'P2', 'P3']);
+});
+
+test('each of the four record states says something, and none says the same thing', () => {
+  const outcome = finished({ p0: 300, p1: 0, p2: 0, p3: 0 }, { p0: 1, p1: 0, p2: 0, p3: 0 });
+  const notes = ['saving', 'saved', 'failed', 'none'].map(
+    (record) => endingFor(outcome, record, 'p0').note,
+  );
+  assert.equal(new Set(notes).size, notes.length, 'two record states read the same');
+  for (const note of notes) assert.ok(note.length > 0, 'a record state says nothing');
+  // A record that fails silently is a record nobody can trust.
+  assert.match(endingFor(outcome, 'failed', 'p0').note, /^Not saved/);
 });
 
 /* ------------------------------------------------------------- countdown */

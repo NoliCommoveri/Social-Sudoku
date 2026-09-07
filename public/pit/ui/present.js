@@ -44,6 +44,21 @@ const nameOf = (commodity) => COMMODITIES[commodity].name;
 /** `art/fruit/<key>.webp` resolves from `/pit/` with no mapping table. */
 export const artFor = (commodity) => `art/fruit/${commodity}.webp`;
 
+/**
+ * The full illustration. `../../../docs/pit/design.md` §4 allows it in exactly
+ * three places and this is one of them: the card at the top of the reveal. Live
+ * play stays on `art/fruit/`, which is why the crop and the card are two
+ * functions rather than one with a flag.
+ */
+export const cardFor = (commodity) => `art/cards/${commodity}.webp`;
+
+/**
+ * How many of a seat's offers the reveal lists before it trails off. Six is
+ * what fits on one line at 360px; the rest of the round is not worth a second
+ * line of numerals under every seat.
+ */
+const COUNTS_SHOWN = 6;
+
 const seatOf = (view, playerId) => view.seats.find((seat) => seat.playerId === playerId) ?? null;
 const offerOf = (view, id) => view.offers.find((offer) => offer.id === id) ?? null;
 const holds = (view, commodity) => view.you.hand[commodity] || 0;
@@ -377,27 +392,141 @@ function lineFor(view, mode, lost, yours, ui) {
   return { kind: 'idle', text: 'Tap a card to offer it' };
 }
 
+/* -------------------------------------------------------------- the reveal */
+
 /**
- * Session 3's stub: who harvested what, for how much, and a way to the next
- * round. The reveal grid, the card art and the celebration are session 4, and
- * building half of them here means building them twice.
+ * The round-end reveal: the card, who filled the basket, and every seat's final
+ * hand with the counts it offered.
+ *
+ * `../design.md` §4 — *this is where the count history retroactively becomes
+ * readable and is a large part of the fun*. Everything on it is already in the
+ * view: `reveal` carries every hand outside `trading`, `history` carries the
+ * round's public events, and the rules module is not touched for any of it.
  */
 function roundEndFor(view) {
   const { playerId, commodity, value, forfeited } = view.harvest;
   const seat = seatOf(view, playerId);
+  const name = seat ? seat.name : playerId;
+  const yours = playerId === view.you.playerId;
+  // A zero with no explanation is the bug report that follows.
+  const note = forfeited ? 'no points — a bot was playing' : `+${value}`;
+
   return {
     playerId,
-    name: seat ? seat.name : playerId,
-    yours: playerId === view.you.playerId,
+    name,
+    yours,
     commodity,
     commodityName: nameOf(commodity),
-    art: artFor(commodity),
+    card: cardFor(commodity),
     tint: COMMODITIES[commodity].tint,
     value,
     forfeited,
-    // A zero with no explanation is the bug report that follows.
-    note: forfeited ? 'no points — a bot was playing' : `+${value}`,
+    // Your win looks different from theirs, and it needs no second asset.
+    headline: yours ? 'You filled the basket' : `${name} filled the basket`,
+    note,
+    // Seat order, not score order: the order the strip uses and the one a
+    // pre-reader navigates by position in.
+    seats: view.seats.map((row) => revealSeat(view, row, note)),
     canReady: !view.you.ready,
     ready: view.you.ready,
   };
+}
+
+/** One seat's block: its score after the harvest, its final hand, its counts. */
+function revealSeat(view, seat, note) {
+  const harvester = seat.playerId === view.harvest.playerId;
+  const hand = view.reveal?.[seat.playerId] ?? {};
+
+  return {
+    playerId: seat.playerId,
+    name: seat.name,
+    you: seat.playerId === view.you.playerId,
+    harvester,
+    // After the harvest, because that is what `view.seats` already carries.
+    score: seat.score,
+    // Only the seat that ended the round has anything to add to its score, so
+    // only that seat carries the sentence explaining a zero.
+    note: harvester ? note : null,
+    // The same slots, the same order and the same art as the hand at the bottom
+    // of the table: the panel is where a player checks their own reading of the
+    // board, and a second layout for the same information is a second thing to
+    // learn.
+    hand: view.commodities.map((commodity) => ({
+      commodity,
+      name: nameOf(commodity),
+      art: artFor(commodity),
+      tint: COMMODITIES[commodity].tint,
+      count: hand[commodity] ?? 0,
+      // The nine that ended it, visible rather than counted.
+      ringed: harvester && commodity === view.harvest.commodity,
+    })),
+    ...countsOffered(view, seat.playerId),
+  };
+}
+
+/**
+ * What this seat offered this round, in order.
+ *
+ * `Bo: 3` three times is information nobody can use while it is happening;
+ * against Bo's final hand of eight kiwis it says what Bo was doing all round.
+ * `offer` events only — withdrawals and expiries are noise at this width — and
+ * no commodity of anybody else's is in `history` to leak.
+ */
+function countsOffered(view, playerId) {
+  const all = view.history
+    .filter((event) => event.kind === 'offer' && event.playerId === playerId)
+    .map((event) => event.count);
+  return { counts: all.slice(0, COUNTS_SHOWN), more: all.length > COUNTS_SHOWN };
+}
+
+/* -------------------------------------------------------------- the ending */
+
+/** *2 baskets*, and nothing at all for a seat that cornered none. */
+function basketsLabel(corners) {
+  if (!corners) return '';
+  return corners === 1 ? '1 basket' : `${corners} baskets`;
+}
+
+/** What the record's sentence says, as a value rather than a string in `app.js`. */
+const RECORD_NOTES = {
+  saving: 'Saving…',
+  saved: 'Saved to the gameroom.',
+  failed: 'Not saved — no answer from the gameroom.',
+  none: 'Nothing to save.',
+};
+
+/**
+ * The end of a session: the headline, the standings, and whether it was written
+ * down.
+ *
+ * `outcome` is what the driver's `onComplete` carried — `isComplete`'s object,
+ * whose seats are already ordered and already ranked, ties sharing a rank. The
+ * client does not recompute either. An abandoned session reaches `isComplete`
+ * as null and arrives here as `{ abandoned: true, seats }` off the view, which
+ * is a session with standings and no ranks, because there were none.
+ *
+ * @param {{ abandoned?: boolean, seats: object[] }} outcome
+ * @param {'saving' | 'saved' | 'failed' | 'none'} record
+ * @param {string} you the viewer's playerId
+ * @returns {{ headline: string, rows: object[], note: string }}
+ */
+export function endingFor(outcome, record, you) {
+  const rows = (outcome?.seats ?? []).map((seat) => ({
+    playerId: seat.playerId,
+    name: seat.name,
+    you: seat.playerId === you,
+    rank: seat.rank ?? null,
+    score: seat.score,
+    corners: seat.corners ?? 0,
+    baskets: basketsLabel(seat.corners ?? 0),
+  }));
+
+  const winners = rows.filter((row) => row.rank === 1);
+  const abandoned = outcome === null || outcome.abandoned === true;
+  const headline = abandoned ? 'Game ended.'
+    : winners.some((row) => row.you) ? 'You won.'
+      : winners.length ? `${winners[0].name} won.`
+        : 'That is the game.';
+
+  return { headline, rows, note: RECORD_NOTES[record] ?? RECORD_NOTES.none };
 }

@@ -7,12 +7,15 @@
 // the action. Nothing in between recomputes the game.
 
 import { getPlayers } from '../../shared/api.js';
+import { avatarSvg } from '../../shared/avatars.js';
 import { HAND, MAX_OFFER } from '../core/commodities.js';
 import { createLocalRoom, seatLimits } from '../room/local.js';
 import { loadPrefs, savePrefs } from '../store/local.js';
 import { buildSeats, botAvatarPool, configFrom, botRange, TARGETS } from './setup.js';
 import { createTable } from './table.js';
-import { idle, onTap, onInteraction, present, receiptFor, RECEIPT_MS } from './present.js';
+import {
+  idle, onTap, onInteraction, present, receiptFor, endingFor, cardFor, RECEIPT_MS,
+} from './present.js';
 
 const $ = (id) => document.getElementById(id);
 const show = (id) => {
@@ -29,6 +32,7 @@ const state = {
   choices: { botCount: null, ...loadPrefs() },
   room: null,
   table: null,
+  faces: {},
   view: null,
   ui: { ...idle },
   hand: null,        // the previous hand, for the receipt
@@ -146,6 +150,7 @@ function deal() {
   // the file whose job it is to be impure.
   const seed = (Date.now() ^ Math.floor(Math.random() * 0xffffffff)) | 0;
 
+  state.faces = faces;
   state.table = createTable($('table'), { faces, onTarget: tapped });
   state.room = createLocalRoom({ seats, config: configFrom(state.choices), seed });
   state.room.onView(onView);
@@ -154,6 +159,10 @@ function deal() {
     state.ui = { ...state.ui, refusal: reason };
     paint();
   });
+  // Ranks with ties are the rules module's to state and the client may not
+  // import it, so the ending arrives here rather than being worked out from the
+  // last view. An abandoned session fires nothing and is drawn in `onView`.
+  state.room.onComplete(finish);
 
   $('quit').addEventListener('click', () => {
     // The client's own confirmation, not the rules module's: with one human at
@@ -168,8 +177,15 @@ function deal() {
   // Which C are in play is not known until the deal, so a <link rel=preload> in
   // the head cannot name them. Twelve kilobytes apiece makes the whole set
   // cheap enough not to need cleverness.
+  //
+  // The cards follow the crops, and are the reason this loop is worth having at
+  // all: which commodity gets cornered is not known until somebody corners one,
+  // and fetching the card when the panel opens would put a blank frame in the
+  // middle of the one moment the panel exists for. Only C of the nine can ever
+  // be needed, over a round that lasts at least seventeen seconds.
   for (const commodity of state.view.commodities) {
     new Image().src = `art/fruit/${commodity}.webp`;
+    new Image().src = cardFor(commodity);
   }
 
   addEventListener('pointerdown', interacted, { passive: true });
@@ -200,7 +216,10 @@ function onView(next) {
   }
   paint();
 
-  if (next.phase === 'over' || next.phase === 'abandoned') finish(next);
+  // `over` comes through `onComplete`, which carries the ranks. An abandon
+  // reaches `isComplete` as null and fires nothing, so it is drawn from the
+  // view: standings with no ranks, because there were none.
+  if (next.phase === 'abandoned') finish({ abandoned: true, seats: next.seats });
 }
 
 function paint() {
@@ -228,23 +247,47 @@ function interacted() {
   if (action) state.room.act(action);
 }
 
-function finish(view) {
+/**
+ * The end of a session. `outcome` is what the driver's `onComplete` carried, or
+ * `{ abandoned: true, seats }` off the view.
+ */
+function finish(outcome) {
   clearInterval(state.repaint);
   removeEventListener('pointerdown', interacted);
   removeEventListener('scroll', interacted);
   state.room.leave();
 
-  // Session 4 owns the end-of-session screen and the `plays` row. This is the
-  // smallest thing that does not leave a finished game on a dead board.
-  $('ended-title').textContent = view.phase === 'abandoned' ? 'Game ended.' : 'That is the game.';
+  // Nothing is written yet: `POST /api/plays` is the second half of this
+  // session, and until it exists the sentence says what is true.
+  drawEnding(outcome, 'none');
+  show('ended');
+}
+
+function drawEnding(outcome, record) {
+  const ending = endingFor(outcome, record, state.me.id);
+  $('ended-title').textContent = ending.headline;
+  $('ended-note').textContent = ending.note;
+
   const list = $('ended-scores');
   list.replaceChildren();
-  for (const seat of [...view.seats].sort((a, b) => b.score - a.score)) {
-    const row = document.createElement('li');
-    row.textContent = `${seat.name} — ${seat.score}`;
-    list.append(row);
+  for (const row of ending.rows) {
+    const item = document.createElement('li');
+    item.classList.toggle('is-you', row.you);
+    const rank = Object.assign(document.createElement('span'), {
+      className: 'stand-rank',
+      textContent: row.rank === null ? '' : String(row.rank),
+    });
+    const face = Object.assign(document.createElement('span'), { className: 'stand-face' });
+    face.innerHTML = avatarSvg(state.faces[row.playerId] ?? '', { size: 40 });
+    item.append(
+      rank,
+      face,
+      Object.assign(document.createElement('span'), { className: 'stand-name', textContent: row.name }),
+      Object.assign(document.createElement('span'), { className: 'stand-baskets', textContent: row.baskets }),
+      Object.assign(document.createElement('span'), { className: 'stand-score', textContent: String(row.score) }),
+    );
+    list.append(item);
   }
-  show('ended');
 }
 
 start();

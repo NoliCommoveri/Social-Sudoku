@@ -77,7 +77,7 @@ function safeAccept(view) {
   return null;
 }
 
-test('a session plays from the deal to the last point through the six methods', () => {
+test('a session plays from the deal to the last point through the seven methods', () => {
   const clock = fakeClock();
   const seats = [HUMAN, ...botSeats(3, 'normal', mulberry32(11))];
   const room = createLocalRoom({ seats, config: {}, seed: 'a-whole-session', clock });
@@ -86,6 +86,10 @@ test('a session plays from the deal to the last point through the six methods', 
   let views = 0;
   const events = [];
   const refusals = [];
+  const outcomes = [];
+  // Recorded against the view count, so "after the view that ended the session"
+  // is asserted rather than assumed.
+  room.onComplete((outcome) => outcomes.push({ outcome, atView: views }));
 
   room.onView((view) => {
     latest = view;
@@ -127,14 +131,63 @@ test('a session plays from the deal to the last point through the six methods', 
   assert.ok(events.some((event) => event.kind === 'harvest'), 'nobody cornered');
   assert.ok(events.some((event) => event.kind === 'over'), 'no event announced the end');
 
+  // Once, after the final view, carrying what the end screen needs and what the
+  // record will need: ranks with ties already shared, and corners.
+  assert.equal(outcomes.length, 1, 'onComplete did not fire exactly once');
+  const { outcome, atView } = outcomes[0];
+  assert.equal(atView, views, 'the outcome arrived before the view that ended the session');
+  assert.equal(outcome.recorded, false);
+  assert.equal(outcome.target, latest.target);
+  assert.deepEqual(
+    outcome.seats.map((seat) => seat.playerId).sort(),
+    latest.seats.map((seat) => seat.playerId).sort(),
+  );
+  assert.equal(outcome.seats[0].rank, 1);
+  assert.ok(outcome.seats.every((seat) => Number.isInteger(seat.corners)));
+  assert.ok(outcome.seats.some((seat) => seat.corners > 0), 'nobody cornered anything');
+  for (const seat of outcome.seats) {
+    assert.equal(seat.score, latest.seats.find((s) => s.playerId === seat.playerId).score);
+  }
+
+  // The clock keeps running until `leave()`, and every one of those ticks sees
+  // the same finished state.
+  for (let i = 0; i < 10; i++) clock.step();
+  assert.equal(outcomes.length, 1, 'onComplete fired again on a later tick');
+
   room.leave();
 });
 
-test('the room has exactly the six members the contract names', () => {
+test('leaving is not an ending, and an abandon is not one either', () => {
+  const clock = fakeClock();
+  const room = createLocalRoom({ seats: [HUMAN, ...botSeats(2)], seed: 'no-ending', clock });
+  const outcomes = [];
+  let latest = null;
+  room.onView((view) => { latest = view; });
+  room.onComplete((outcome) => outcomes.push(outcome));
+
+  room.join(HUMAN);
+  for (let i = 0; i < 20; i++) clock.step();
+  room.leave();
+  for (let i = 0; i < 20; i++) clock.step();
+  assert.deepEqual(outcomes, [], 'leaving produced an outcome');
+
+  // And an abandoned session, which is the no-writes property of
+  // `../docs/pit/design.md` §2.6: `isComplete` is null in `'abandoned'`, so
+  // there is nothing to write and nothing fires.
+  const second = createLocalRoom({ seats: [HUMAN, ...botSeats(2)], seed: 'abandoning', clock: fakeClock() });
+  second.onView((view) => { latest = view; });
+  second.onComplete((outcome) => outcomes.push(outcome));
+  second.join(HUMAN);
+  second.act({ type: 'abandon' });
+  assert.equal(latest.phase, 'abandoned');
+  assert.deepEqual(outcomes, [], 'an abandoned session produced an outcome');
+});
+
+test('the room has exactly the seven members the contract names', () => {
   const room = createLocalRoom({ seats: [HUMAN, ...botSeats(2)], clock: fakeClock() });
   assert.deepEqual(
     Object.keys(room).sort(),
-    ['act', 'join', 'leave', 'onEvent', 'onRefusal', 'onView'],
+    ['act', 'join', 'leave', 'onComplete', 'onEvent', 'onRefusal', 'onView'],
   );
 });
 

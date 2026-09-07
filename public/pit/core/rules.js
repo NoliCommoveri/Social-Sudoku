@@ -157,7 +157,8 @@ export function init(seats, config = {}, seed = 0) {
   const numeric = numericSeed(seed);
   const commodities = drawCommodities(mulberry32(numeric), table.length);
   const scores = {};
-  for (const seat of table) scores[seat.playerId] = 0;
+  const corners = {};
+  for (const seat of table) { scores[seat.playerId] = 0; corners[seat.playerId] = 0; }
 
   return deal({
     seed: numeric,
@@ -172,6 +173,9 @@ export function init(seats, config = {}, seed = 0) {
     offers: [],
     offerSeq: 0,
     scores,
+    // Beside `scores` and behaving like it: a session total, not a round one,
+    // so `deal` carries it forward rather than resetting it.
+    corners,
     history: [],
     botsReadyAt: {},
     botSeq: 0,
@@ -439,6 +443,9 @@ function applyHarvest(state, actor, now) {
       hands,
       offers: [],
       scores: { ...state.scores, [actor]: state.scores[actor] + value },
+      // A bot playing an absent seat took this corner, and the seat that left
+      // gets the same nothing from it that it gets in points.
+      corners: forfeited ? state.corners : { ...state.corners, [actor]: state.corners[actor] + 1 },
       harvest: { playerId: actor, commodity, value, forfeited },
       roundEndsAt: now + REVEAL_BACKSTOP_MS,
       ready: [],
@@ -818,9 +825,13 @@ export function view(state, viewer) {
 /* ------------------------------------------------------------- isComplete */
 
 /**
- * Null while the session is running; afterwards every seat with its score and
- * its rank, ties sharing a rank. The input to the play record in session 4, and
- * it knows nothing about D1.
+ * Null while the session is running; afterwards every seat with its score, its
+ * corners and its rank, ties sharing a rank. The input to the play record and
+ * to the end-of-session standings, and it knows nothing about D1.
+ *
+ * Corners are here and not in the view: nothing on the table draws them, and a
+ * field in the view that nothing reads is a field the next session has to
+ * decide about.
  * @returns {null | { game: string, target: number, seats: object[] }}
  */
 export function isComplete(state) {
@@ -831,7 +842,14 @@ export function isComplete(state) {
   const seats = ordered.map((seat, index) => {
     const score = state.scores[seat.playerId];
     if (score !== previous) { rank = index + 1; previous = score; }
-    return { playerId: seat.playerId, name: seat.name, isBot: seat.isBot, score, rank };
+    return {
+      playerId: seat.playerId,
+      name: seat.name,
+      isBot: seat.isBot,
+      score,
+      corners: state.corners[seat.playerId] ?? 0,
+      rank,
+    };
   });
   return { game: id, target: state.target, rounds: state.round, seats };
 }

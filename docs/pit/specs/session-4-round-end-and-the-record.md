@@ -187,13 +187,20 @@ list of names and numbers `app.js` builds inline; this replaces it.
 The decisions are `present.js`'s:
 
 ```js
-endingFor(outcome, record) -> { headline, rows, note }
+endingFor(outcome, record, you) -> { headline, rows, note }
 ```
 
 `record` is `'saving' | 'saved' | 'failed' | 'none'`, so the sentence is a value
 in a test rather than a string in `app.js`. `rows` carry `playerId`; `app.js`
 attaches faces from the map it has held since session 3, the same way `table.js`
 does — `Seat` still has no avatar field.
+
+`outcome` is what `onComplete` carried, whose seats are already ordered and
+already ranked. An abandoned session never reaches `onComplete` (§4.2), so
+`app.js` passes `{ abandoned: true, seats }` off the view instead: standings
+with no ranks, because there were none, and none recomputed on this side. `you`
+is the viewer, which is the one thing neither `isComplete` nor a `Seat` carries
+and the headline cannot be written without.
 
 `Play again` is a link and stays one. It costs a document load and a
 `/api/players` round trip, and it buys a table with no chance of holding

@@ -499,6 +499,35 @@ test('a session is not complete before a score reaches the target', () => {
   assert.equal(isComplete(scored), null, 'a corner is not the end of a session');
 });
 
+// `../docs/identity-and-stats.md` §4: *Pit shows points and corners.* Points
+// are in the view; corners are a session total that only `isComplete` carries.
+test('a corner is counted for the harvester, for nobody else, and not for a forfeit', () => {
+  let state = stackTheDeck(init(table(4), {}, 62), 'p1');
+  assert.deepEqual(state.corners, { p0: 0, p1: 0, p2: 0, p3: 0 });
+
+  state = apply(state, 'p1', { type: 'harvest' }, 0).state;
+  assert.deepEqual(state.corners, { p0: 0, p1: 1, p2: 0, p3: 0 });
+
+  // Through the reveal and into the next round: a session total, not a round
+  // one, so the deal does not reset it.
+  for (const seat of state.seats) state = apply(state, seat.playerId, { type: 'ready' }, 0).state;
+  assert.equal(state.round, 2);
+  assert.deepEqual(state.corners, { p0: 0, p1: 1, p2: 0, p3: 0 });
+
+  state = apply(stackTheDeck(state, 'p1'), 'p1', { type: 'harvest' }, 0).state;
+  assert.equal(state.corners.p1, 2);
+
+  // A bot playing an absent seat took that corner, and the seat that left gets
+  // the same nothing from it that it gets in points.
+  let left = stackTheDeck(init(table(4), {}, 63), 'p2');
+  left = { ...left, forfeit: ['p2'] };
+  const forfeited = apply(left, 'p2', { type: 'harvest' }, 0).state;
+  assert.equal(forfeited.harvest.forfeited, true);
+  assert.equal(forfeited.scores.p2, 0);
+  assert.deepEqual(forfeited.corners, { p0: 0, p1: 0, p2: 0, p3: 0 });
+  assertConserved(forfeited, 'a forfeited harvest');
+});
+
 test('isComplete ranks by score with ties sharing a rank', () => {
   const base = init(table(4), {}, 61);
   const state = {
@@ -513,6 +542,14 @@ test('isComplete ranks by score with ties sharing a rank', () => {
   assert.equal(byId.p0.rank, 3, 'a shared first pushes the next rank to three');
   assert.equal(byId.p3.rank, 4);
   assert.equal(byId.p0.name, 'P0');
+
+  // And the corners come with it, because the end screen and the record both
+  // need them and the view carries neither.
+  const baskets = isComplete({ ...state, corners: { p0: 1, p1: 3, p2: 0, p3: 0 } });
+  assert.deepEqual(
+    Object.fromEntries(baskets.seats.map((seat) => [seat.playerId, seat.corners])),
+    { p0: 1, p1: 3, p2: 0, p3: 0 },
+  );
 });
 
 // The stopped seat (`../docs/pit/design.md` §2.6) moves cards through paths the

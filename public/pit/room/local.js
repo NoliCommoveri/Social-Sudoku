@@ -13,7 +13,9 @@
 // because the gate lives in State and State is opaque to whatever carries it —
 // `../../../docs/pit/specs/session-2-bots-and-the-local-driver.md` §2.
 
-import { init, validate, apply, view, tick, tickIntervalMs, minPlayers, maxPlayers } from '../core/rules.js';
+import {
+  init, validate, apply, view, tick, isComplete, tickIntervalMs, minPlayers, maxPlayers,
+} from '../core/rules.js';
 import { BOT_LEVELS, DEFAULT_LEVEL } from '../core/bot.js';
 
 /**
@@ -51,13 +53,14 @@ const wallClock = {
 
 /**
  * @param {{ seats: object[], config?: object, seed?: string | number, clock?: Clock }} options
- * @returns {{ join: Function, act: Function, onView: Function, onEvent: Function, onRefusal: Function, leave: Function }}
+ * @returns {{ join: Function, act: Function, onView: Function, onEvent: Function, onRefusal: Function, onComplete: Function, leave: Function }}
  */
 export function createLocalRoom({ seats, config = {}, seed = 0, clock = wallClock }) {
   let state = init(seats, config, seed);
   let viewer = null;
   let cancel = null;
-  const handlers = { view: null, event: null, refusal: null };
+  const handlers = { view: null, event: null, refusal: null, complete: null };
+  let completed = false;
 
   // The view is the truth and the events are garnish for animation and sound.
   // A client that had to accumulate state from events would be a client that
@@ -66,6 +69,20 @@ export function createLocalRoom({ seats, config = {}, seed = 0, clock = wallCloc
     if (viewer === null) return;
     if (handlers.view) handlers.view(view(state, viewer));
     if (handlers.event) for (const event of events) handlers.event(event);
+
+    // After the view that ended the session, so the client paints the final
+    // board before it draws the standings over it. Once: `tick` keeps running
+    // until `leave()` and every one of those ticks sees the same finished
+    // state. An abandoned session produces nothing at all, because
+    // `isComplete` is null in `'abandoned'` — the no-writes property
+    // `../../../docs/pit/design.md` §2.6 built, working as designed.
+    if (completed) return;
+    const outcome = isComplete(state);
+    if (outcome === null) return;
+    completed = true;
+    // False here and true from Phase 7's socket, where the room writes the row
+    // itself. `app.js`'s post is then one `if` rather than a file to delete.
+    if (handlers.complete) handlers.complete({ ...outcome, recorded: false });
   }
 
   // A backgrounded tab comes back to one tick with a large `now` delta. Expiry
@@ -121,7 +138,16 @@ export function createLocalRoom({ seats, config = {}, seed = 0, clock = wallCloc
     /** @param {(refusal: { action: object, reason: string }) => void} fn */
     onRefusal(fn) { handlers.refusal = fn; },
 
-    /** Idempotent. Session 4 decides what happens to a session abandoned mid-round. */
+    /**
+     * Fired once, after the view that ended the session. The end screen needs
+     * ranks, ranks with ties are `isComplete`'s to state, and the client may
+     * not import the rules module — so the driver answers, the same way
+     * `seatLimits()` does.
+     * @param {(outcome: object) => void} fn
+     */
+    onComplete(fn) { handlers.complete = fn; },
+
+    /** Idempotent, and fires nothing: leaving is not an ending. */
     leave() {
       if (cancel) cancel();
       cancel = null;
@@ -129,6 +155,7 @@ export function createLocalRoom({ seats, config = {}, seed = 0, clock = wallCloc
       handlers.view = null;
       handlers.event = null;
       handlers.refusal = null;
+      handlers.complete = null;
     },
   };
 }
