@@ -24,7 +24,7 @@ are:
   `public/pit/`. One person picks how many bots sit down and plays rounds
   against them on a phone. A seat left alone is taken over by a bot sixty
   seconds later and reclaimed by a tap.
-- 302 tests under `test/`, run by GitHub Actions on every push.
+- 304 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
@@ -145,9 +145,16 @@ picking, not editing.** A `play_results` row needs a `player_id`, which the
 
 ### Phase 3 — The record
 
-Delivers **H4**. Sudoku solo writes a row when a board is finished; the hub
-reads it back. Per-game and overall views. This is the first phase where the
-site does something the standalone sudoku could not.
+Delivers **H4**. Per-game and overall views, the play log on the front page, and
+sudoku solo writing a row when a board is finished. This is the first phase
+where the site does something the standalone sudoku could not.
+
+**The write path lands earlier, in Pit session 4.** Pit is the game that reaches
+an ending first, so `POST /api/plays` and `POST /api/plays/:id/end` are built
+there — game-agnostic, and sudoku's call through them is two lines. What is left
+here is the reading: the log, the per-game views, the overall tile, and
+`docs/identity-and-stats.md` §5's open item I1, which is what the front page
+shows.
 
 Absorbs the old slice 9. Medium.
 
@@ -192,10 +199,14 @@ makes, which is what keeps `table.js` down to creating elements and reporting
 taps. Offering and accepting are the same two-tap mechanism against the hand,
 because the hand is the only place a commodity is ever named.
 
-**Session 4 is next and is not spec'd**: the round-end reveal, the harvest
-celebration, the full card art, the end-of-session screen, the `plays` row, and
-the game's tile on the hub shelf. §5.6's plain panel is the stub that lets
-rounds follow one another until then.
+**Session 4 is next**, and is
+[`docs/pit/specs/session-4-round-end-and-the-record.md`](docs/pit/specs/session-4-round-end-and-the-record.md):
+the round-end reveal with the full card art and the counts each seat offered,
+the end-of-session standings, the write path — a `plays` row opened at the deal
+and closed at the end, so an abandoned game is a row with no result — and the
+game's tile on the hub shelf. Large, ~100k, and the reveal is a committable
+stopping point on its own. §5.6's plain panel is the stub that lets rounds
+follow one another until then.
 
 ### Phase 6 — GameRoom
 
@@ -269,6 +280,11 @@ the right number for a 5-year-old.
 
 **S11** is the sudoku board chooser and the win popup, and it needs neither the
 gate nor a database — it can be run on the phone the moment they are deployed.
+
+**S12** is Pit's reveal, its ending and the record, and it runs after session 4
+is deployed. It needs S6 as well as S10: nothing can be written before the
+schema is applied, and until Phase 3 reads the log the only way to see a written
+row is `/admin`'s export.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

@@ -9,7 +9,7 @@ the rest live only as a row in the table below.
 | 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | ✅ Built |
 | 2 | Bots and the local driver | [`session-2-bots-and-the-local-driver.md`](session-2-bots-and-the-local-driver.md) | Medium | ✅ Built |
 | 3 | The stopped seat, and the table | [`session-3-the-table.md`](session-3-the-table.md) | Large | ✅ Built |
-| 4 | Round end, the session, the record | — | Medium | Next, not spec'd |
+| 4 | Round end, the session, the record | [`session-4-round-end-and-the-record.md`](session-4-round-end-and-the-record.md) | Large | Next |
 
 Sessions 1–4 are hub Phase 5 and leave a Pit that one person plays against bots
 on one phone. Multiplayer is Phases 6 and 7 — the `GameRoom` Durable Object,
@@ -53,8 +53,15 @@ act(action)                 // fire and forget; a refusal comes back as onRefusa
 onView(view => …)           // full view, pushed after every applied action and tick
 onEvent(event => …)         // public events only, for animation and sound
 onRefusal(({ action, reason }) => …)
+onComplete(outcome => …)    // once, after the view that ended the session
 leave()
 ```
+
+`onComplete` carries `isComplete`'s object plus `recorded`, which says whether
+the row has already been written: false from the local driver, because the
+client posts it (`session-4-round-end-and-the-record.md` §5), and true from
+Phase 7's socket, because the room does. Ranks and corners are on it because
+they are the rules module's to state and the client may not ask it directly.
 
 Bots are not in it. They are gated and driven inside the rules module's `tick`,
 because the gate lives in `State` and `State` is opaque to whatever carries it —
@@ -101,6 +108,6 @@ Anything that can only be answered on a phone is an `S`* item in
 person and the device named — not a line in a session's acceptance criteria.
 The table's is **S10**, and it carries `../design.md` §2.6's timing checks as
 well as the layout ones — sixty seconds is tuned against bots and can only be
-judged against people. Session 4's is written when session 4 is spec'd, because
-until the reveal is designed there is nothing specific to ask anybody to look
-at.
+judged against people. Session 4's is **S12**, and it needs **S6** as well as S10: the
+record cannot be checked before the schema has been applied, and until Phase 3
+the only way to read a written row is `/admin`'s export.
