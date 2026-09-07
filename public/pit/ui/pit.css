@@ -1,0 +1,482 @@
+/*
+  The table, on the shell's tokens (`/shared/theme.css`). Pit adds its own
+  accent and nothing else; it does not redefine what the shell set.
+
+  Two rules the whole file is built around:
+
+  - **Nothing changes size when it changes state.** The harvest bar is present
+    and dark from the first render rather than appearing when it lights, the
+    line holds its height when it is empty, a group with zero cards keeps its
+    slot, and a chip's countdown replaces text inside the chip rather than
+    growing it. A live board that reflows under a finger produces mis-taps, and
+    a mis-tap here is a trade.
+  - **No rule here names a count.** The hand size and the offer cap arrive as
+    `--hand` and `--max-offer`, set once in `app.js` from `commodities.js`, so
+    little-kid mode changes all three in one file. The grep that defends the
+    JavaScript is deliberately not run over CSS — a stylesheet is full of `4px`
+    and a grep that fires on those is a grep somebody disables — and what
+    defends this file instead is that no rule in it needs a number.
+*/
+
+:root {
+  /* Pit's one saturated colour. docs/design-language.md §4. */
+  --pit: #ffb02e;
+  --strip-h: 4.5rem;
+  --row-h: 4rem;
+  /* Two lines of body text, which is also the count buttons' height: the line
+     and the count row must be the same size, or every offer shifts the hand
+     under the finger that is about to tap it. */
+  --line-h: var(--tap);
+}
+
+/* The overlays below all set `display`, which beats the user agent's rule for
+   `[hidden]`. Without this an invisible panel still swallows the tap that was
+   meant for the hand under it. */
+[hidden] { display: none !important; }
+
+#app {
+  max-width: 34rem;
+  margin: 0 auto;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+.screen[hidden] { display: none; }
+.pad { padding: var(--pad); }
+
+.back {
+  display: inline-flex;
+  align-items: center;
+  min-height: 3rem;
+  margin-left: -0.5rem;
+  padding: 0 0.5rem;
+  color: var(--ink-soft);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+h1 { font-size: var(--step-3); margin: 0 0 0.5rem; }
+.ask { font-size: var(--step-1); font-weight: 600; margin: 1.25rem 0 0.5rem; }
+.note { color: var(--ink-soft); margin: 0.75rem 0; }
+.note.bad { color: var(--stop); }
+
+/* ------------------------------------------------------------------ setup */
+
+/* The tile row is built from the room's seat range, so a tenth commodity
+   widens it with no edit here. */
+.tiles {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4.5rem, 1fr));
+  gap: var(--gap);
+}
+
+.tile,
+.pill {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.125rem;
+  min-height: var(--tap);
+  padding: 0.5rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step-2);
+  font-weight: 700;
+  cursor: pointer;
+
+  & small { font-size: var(--step-0); font-weight: 500; color: var(--ink-soft); }
+
+  &[aria-pressed='true'] {
+    background: var(--pit);
+    border-color: var(--pit);
+    color: var(--accent-ink);
+
+    & small { color: inherit; opacity: 0.8; }
+  }
+}
+
+.pills { display: flex; gap: var(--gap); }
+.pill { flex: 1; font-size: var(--step-1); }
+
+/* The level names come out of the rules module lowercase; nothing else on this
+   screen wants title case. */
+#levels .pill { text-transform: capitalize; }
+
+.btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: var(--tap);
+  margin-top: var(--gap);
+  padding: 0 1.5rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel-high);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step-1);
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.btn-go { background: var(--pit); border-color: var(--pit); color: var(--accent-ink); }
+.btn-stop { background: var(--stop); border-color: var(--stop); color: #1a0505; }
+.btn-quiet { background: transparent; }
+.btn:disabled { opacity: 0.35; cursor: default; }
+
+.scores { list-style: none; padding: 0; margin: 0 0 1rem; font-size: var(--step-2); }
+.scores li { padding: 0.5rem 0; border-bottom: 1px solid var(--edge); }
+
+/* ------------------------------------------------------------ seat strip */
+
+#table {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+  padding: var(--gap);
+  flex: 1;
+}
+
+.strip {
+  display: flex;
+  gap: 0.25rem;
+  min-height: var(--strip-h);
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.chip {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.375rem;
+  flex: 0 0 auto;
+  min-width: 4.75rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+
+  &.is-you { border-color: var(--pit); }
+  &.is-forfeited .chip-score { opacity: 0.35; text-decoration: line-through; }
+  &.is-taken .chip-face { display: none; }
+  &.is-taken .chip-bot { display: block; }
+}
+
+.chip-menu {
+  min-width: 3.5rem;
+  justify-content: center;
+  background: var(--panel-high);
+  color: var(--ink);
+  font: inherit;
+  cursor: pointer;
+}
+
+.menu-mark { font-size: var(--step-3); line-height: 1; }
+.chip-face { display: flex; width: 2rem; height: 2rem; }
+.chip-bot { display: none; font-size: var(--step-2); line-height: 1; }
+.chip-body { display: flex; flex-direction: column; min-width: 0; line-height: 1.15; }
+.chip-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.chip-score { font-variant-numeric: tabular-nums; color: var(--ink-soft); }
+
+/* Replaces text inside the chip rather than growing it. */
+.chip-away { color: var(--stop); font-size: var(--step-0); white-space: nowrap; }
+.chip:not(.is-away) .chip-away { display: none; }
+
+.chip-bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--stop);
+  transform-origin: left;
+  transform: scaleX(0);
+}
+
+.chip.is-away .chip-bar { transform: scaleX(1); }
+
+/* ------------------------------------------------------------ offer board */
+
+.board {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  /* Fixed at three rows and scrolling past them, rather than growing with the
+     board. Growing would move the harvest bar — the most consequential tap on
+     the screen — every time somebody posts an offer. Every seat may hold one,
+     so C = 9 could produce nine rows; the layout is tuned for four to six seats
+     and survives nine, which is the honest ordering. */
+  height: calc(var(--row-h) * 3 + 0.5rem);
+  overflow-y: auto;
+}
+
+.row {
+  position: relative;
+  display: grid;
+  grid-template-columns: 2rem 1fr auto auto auto;
+  align-items: center;
+  gap: 0.5rem;
+  min-height: var(--row-h);
+  padding: 0 0.625rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel);
+  overflow: hidden;
+
+  &.is-tappable { cursor: pointer; border-color: var(--pit); }
+  &.is-grey { opacity: 0.4; }
+  &.is-selected { outline: 3px solid var(--pit); outline-offset: -3px; }
+  &.is-mine { border-style: dashed; }
+}
+
+.row-face { display: flex; width: 2rem; height: 2rem; }
+.row-name { font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.row-what { color: var(--ink-soft); }
+.row-count { font-size: var(--step-4); font-weight: 800; font-variant-numeric: tabular-nums; }
+.row-left { color: var(--ink-soft); font-variant-numeric: tabular-nums; min-width: 1.5rem; text-align: right; }
+
+.row-take {
+  min-height: 2.75rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel-high);
+  color: var(--ink);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.row-bar {
+  position: absolute;
+  inset: auto 0 0 0;
+  height: 3px;
+  background: var(--pit);
+  transform-origin: left;
+  transform: scaleX(1);
+}
+
+@keyframes sweep { from { transform: scaleX(1); } to { transform: scaleX(0); } }
+
+/* The countdown is information, so under reduced motion it becomes a numeral
+   rather than disappearing. Both nodes are always rendered; CSS chooses. */
+@media (prefers-reduced-motion: reduce) {
+  .row-bar, .chip-bar { display: none; }
+}
+
+@media not (prefers-reduced-motion: reduce) {
+  .row-left { display: none; }
+}
+
+/* ------------------------------------------------------------- the line */
+
+.line-wrap {
+  display: grid;
+  min-height: var(--line-h);
+  align-items: center;
+}
+
+.line {
+  margin: 0;
+  min-height: var(--line-h);
+  display: flex;
+  align-items: center;
+  color: var(--ink-soft);
+  font-size: var(--step-0);
+  line-height: 1.25;
+
+  &[data-kind='receipt'] { color: var(--good); font-weight: 700; }
+  &[data-kind='reclaim'] { color: var(--stop); font-weight: 700; }
+  &[data-kind='gone'],
+  &[data-kind='refusal'] { color: var(--stop); }
+}
+
+.counts {
+  display: flex;
+  gap: var(--gap);
+  &:empty { display: none; }
+}
+
+.line:has(+ .counts:not(:empty)) { display: none; }
+
+.count {
+  flex: 1;
+  min-height: var(--tap);
+  border: 1px solid var(--pit);
+  border-radius: var(--radius);
+  background: var(--panel-high);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--step-3);
+  font-weight: 800;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------- harvest bar */
+
+/* Present and dark from the first render. It sits away from the hand groups by
+   the height of the line: the tap it receives is the most consequential on the
+   screen and must not be adjacent to the most frequent one. */
+.harvest {
+  min-height: var(--tap);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: var(--panel);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: var(--step-3);
+  font-weight: 800;
+  letter-spacing: 0.02em;
+  cursor: default;
+  /* The bar and the hand hug the bottom together, and the slack in a tall
+     viewport opens above them. The separation between the two is deliberate:
+     the tap the bar receives is the most consequential on the screen and must
+     not sit against the most frequent one. */
+  margin-top: auto;
+  margin-bottom: 1.25rem;
+
+  &:not(:disabled) {
+    background: var(--pit);
+    border-color: var(--pit);
+    color: var(--accent-ink);
+    cursor: pointer;
+    /* Lit, not pulsing. A saturated bar against a dark one is the whole signal,
+       and a permanent animation is the one thing on this screen that would run
+       for the length of a round. */
+    box-shadow: 0 0 0 4px rgb(255 176 46 / 0.22);
+  }
+}
+
+/* ---------------------------------------------------------------- hand */
+
+/* Every commodity in play gets a slot, always, in value order — which is
+   public. Zeros are greyed rather than removed: position is how a pre-reader
+   finds a thing, and a row that reorders itself is a row nobody can learn.
+   Five columns at 360px give slots above the 64px floor; C <= 5 is one row and
+   6-9 is two. */
+.hand {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
+  gap: 0.25rem;
+
+  @container (min-width: 0px) { grid-template-columns: repeat(min(var(--hand), 5), 1fr); }
+}
+
+.slot {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap);
+  padding: 0.25rem;
+  border: 1px solid var(--edge);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--tint) 22%, var(--panel));
+  cursor: pointer;
+
+  &.is-empty { opacity: 0.3; }
+  &:disabled { cursor: default; }
+  &.is-selected { outline: 3px solid var(--pit); outline-offset: -3px; }
+  &.is-ringed { box-shadow: inset 0 0 0 3px var(--tint); }
+}
+
+.slot-art { width: 2.25rem; height: 2.25rem; object-fit: contain; }
+
+.slot-count {
+  font-size: var(--step-2);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  line-height: 1;
+}
+
+.slot-ring {
+  min-height: 1rem;
+  font-size: var(--step-0);
+  color: var(--ink-soft);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ------------------------------------------------------------ overlays */
+
+/* The seat strip stays visible above the scrim: who is at the table is the
+   thing you look at while waiting. */
+.scrim {
+  position: absolute;
+  inset: calc(var(--strip-h) + var(--gap)) 0 0 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--gap);
+  padding: var(--pad);
+  background: rgb(6 9 14 / 0.86);
+  z-index: 3;
+}
+
+.scrim-word { font-size: var(--step-4); font-weight: 800; margin: 0; }
+
+.banner,
+.sheet,
+.panel {
+  position: absolute;
+  inset: auto var(--gap) var(--gap) var(--gap);
+  padding: var(--pad);
+  border: 1px solid var(--edge);
+  border-radius: var(--radius-lg);
+  background: var(--panel-high);
+  box-shadow: var(--lift-high);
+  z-index: 4;
+}
+
+.banner-text { margin: 0; font-size: var(--step-1); font-weight: 600; }
+
+.panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  border-color: var(--tint, var(--edge));
+}
+
+.panel-art { width: 4rem; height: 4rem; object-fit: contain; }
+.panel-who { margin: 0.5rem 0 0; font-size: var(--step-2); font-weight: 700; }
+.panel-note { margin: 0.25rem 0 0.5rem; font-size: var(--step-2); color: var(--pit); font-weight: 800; }
+
+/* ---------------------------------------------------------- animation */
+
+/* 200-400ms, and nothing anybody has to wait out. The trade animation moves the
+   card back and nothing else: a back that differed by commodity would be the
+   leak the whole game is built to prevent. */
+.flick {
+  position: fixed;
+  width: 2rem;
+  height: 2.75rem;
+  margin: -1.375rem 0 0 -1rem;
+  border-radius: 0.25rem;
+  pointer-events: none;
+  z-index: 5;
+  animation: flick 320ms cubic-bezier(0.3, 0, 0.2, 1) forwards;
+}
+
+@keyframes flick {
+  to { transform: translate(var(--dx), var(--dy)) rotate(12deg); opacity: 0; }
+}
+
+.pulse { animation: pulse 260ms ease-out; }
+@keyframes pulse { 50% { transform: scale(1.06); } }
+
+@media (prefers-reduced-motion: reduce) {
+  .flick, .pulse { animation: none; }
+}

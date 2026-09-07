@@ -745,6 +745,14 @@ export function view(state, viewer) {
       score: state.scores[seat.playerId] ?? 0,
       ready: state.ready.includes(seat.playerId),
       idleSince: state.idleSince[seat.playerId] ?? null,
+      // The deadline rather than the duration, for the same reason
+      // `offer.expiresAt` is: view() is given no `now`, and a client that had
+      // to be told IDLE_TAKEOVER_MS to work this out would be a client with a
+      // rules constant written down in it. Null for a bot, which cannot be
+      // absent and has no clock running on it.
+      takeoverAt: seat.isBot || state.idleSince[seat.playerId] === undefined
+        ? null
+        : state.idleSince[seat.playerId] + IDLE_TAKEOVER_MS,
       takenOver: state.takenOver.includes(seat.playerId),
       forfeited: state.forfeit.includes(seat.playerId),
     })),

@@ -13,8 +13,23 @@
 // because the gate lives in State and State is opaque to whatever carries it —
 // `../../../docs/pit/specs/session-2-bots-and-the-local-driver.md` §2.
 
-import { init, validate, apply, view, tick, tickIntervalMs } from '../core/rules.js';
-import { DEFAULT_LEVEL } from '../core/bot.js';
+import { init, validate, apply, view, tick, tickIntervalMs, minPlayers, maxPlayers } from '../core/rules.js';
+import { BOT_LEVELS, DEFAULT_LEVEL } from '../core/bot.js';
+
+/**
+ * How many can sit down, asked of the room rather than of the rules module.
+ *
+ * The setup screen needs the range to draw its tile row and may not import
+ * `core/rules.js` — `../../../docs/pit/specs/session-3-the-table.md` §9. The
+ * room is the right place to be asked: Phase 7's socket answers the same
+ * question about the same rules, so a tenth commodity widens the row with no
+ * edit in the client.
+ *
+ * @returns {{ minPlayers: number, maxPlayers: number, levels: string[], defaultLevel: string }}
+ */
+export function seatLimits() {
+  return { minPlayers, maxPlayers, levels: [...BOT_LEVELS], defaultLevel: DEFAULT_LEVEL };
+}
 
 /**
  * The wall clock, and the only place under `public/pit/` that reads one. It is

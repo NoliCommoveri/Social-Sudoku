@@ -172,8 +172,7 @@ test('core/bot.js cannot reach the rules module', () => {
   assert.deepEqual(importsOf('core/bot.js'), ['./commodities.js']);
 });
 
-// The client renders a view and sends actions. Session 3's files do not exist
-// yet; the rule is written now so that it is enforced the moment they do.
+// The client renders a view and sends actions.
 test('nothing outside core/ and room/ imports the rules module', () => {
   const offences = [];
   for (const rel of sources()) {
@@ -184,4 +183,50 @@ test('nothing outside core/ and room/ imports the rules module', () => {
     }
   }
   assert.deepEqual(offences, [], `the rules module reached from a client file:\n${offences.join('\n')}`);
+});
+
+// `present.js` is the whole of the table's logic and the only part of the
+// screen CI can reach. It is worth reaching exactly while it stays pure: a
+// `Date.now()` in here is a decision that can no longer be asserted, and a
+// `document` in here is the table half leaking into the tested half.
+test('ui/present.js touches no DOM, no storage, no clock and no randomness', () => {
+  const FORBIDDEN = [
+    'document', 'window', 'localStorage', 'sessionStorage', 'navigator',
+    'fetch', 'Date', 'setTimeout', 'setInterval', 'performance', 'matchMedia',
+  ];
+  const code = blankCommentsAndStrings(read('ui/present.js'));
+  const offences = [];
+  for (const global of FORBIDDEN) {
+    const pattern = new RegExp(`(?<![\\w$.])${global}(?![\\w$])`, 'g');
+    for (const match of code.matchAll(pattern)) {
+      offences.push(`present.js:${code.slice(0, match.index).split('\n').length} references ${global}`);
+    }
+  }
+  for (const match of code.matchAll(/Math\s*\.\s*random/g)) {
+    offences.push(`present.js:${code.slice(0, match.index).split('\n').length} calls Math.random`);
+  }
+  assert.deepEqual(offences, [], `present.js is not pure:\n${offences.join('\n')}`);
+});
+
+// It reaches the sizes and nothing else. A driver import here would be a screen
+// that can act on its own; a rules import is already banned above.
+test('ui/present.js imports the sizes and nothing else', () => {
+  assert.deepEqual(importsOf('ui/present.js'), ['../core/commodities.js']);
+});
+
+// The two directories session 3 added are under the scans above, and this is
+// the assertion that says so out loud rather than leaving it to be noticed.
+test('every file under public/pit/ is covered by the scans', () => {
+  assert.deepEqual(sources(), [
+    'core/bot.js',
+    'core/commodities.js',
+    'core/rng.js',
+    'core/rules.js',
+    'room/local.js',
+    'store/local.js',
+    'ui/app.js',
+    'ui/present.js',
+    'ui/setup.js',
+    'ui/table.js',
+  ]);
 });

@@ -8,8 +8,8 @@ the rest live only as a row in the table below.
 |---|---|---|---|---|
 | 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | ✅ Built |
 | 2 | Bots and the local driver | [`session-2-bots-and-the-local-driver.md`](session-2-bots-and-the-local-driver.md) | Medium | ✅ Built |
-| 3 | The stopped seat, and the table | [`session-3-the-table.md`](session-3-the-table.md) | Large | Next, spec'd |
-| 4 | Round end, the session, the record | — | Medium | Not spec'd |
+| 3 | The stopped seat, and the table | [`session-3-the-table.md`](session-3-the-table.md) | Large | ✅ Built |
+| 4 | Round end, the session, the record | — | Medium | Next, not spec'd |
 
 Sessions 1–4 are hub Phase 5 and leave a Pit that one person plays against bots
 on one phone. Multiplayer is Phases 6 and 7 — the `GameRoom` Durable Object,
