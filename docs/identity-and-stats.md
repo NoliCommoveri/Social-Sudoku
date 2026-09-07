@@ -137,8 +137,15 @@ Schema in [`architecture.md`](architecture.md) §3.1. What it is *for*:
 ### 4.1 Rules the write path follows
 
 - **The rules module never writes.** The room writes on completion, or the
-  client posts to `/api/plays` for solo games. A game that can write its own
+  client posts to `/api/plays` — which is what a game running on one device
+  does, Pit against bots as much as solo sudoku. A game that can write its own
   score is a game a 12-year-old can write any score into.
+- **A row opens at the start and closes at the end.** `POST /api/plays` when the
+  game begins, `POST /api/plays/:id/end` when it stops, so a phone that gets
+  locked mid-game leaves a play with no ending rather than nothing at all. The
+  Worker chooses the id and both timestamps, and `play_results.player_id` comes
+  from the `who` cookie and never from the body — §3.3 is what that signature is
+  for.
 - **Solo sudoku posts once, on completion.** It is a static page with no socket;
   one `POST` is the entire server involvement. Server-side validation of a solo
   time is not worth building — see `architecture.md` §7 for where that judgement

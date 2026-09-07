@@ -6,10 +6,11 @@
 // highlights inside itself, which is what makes "which game am I in"
 // answerable at a glance (docs/design-language.md §4).
 //
-// `art` is the tile's picture and is drawn at about 120px. It has to be legible
-// as *which game* from across a room, so it is a bold mark rather than an
-// illustration, and it never carries the game's name as text — the caption is
-// the text.
+// `art` is the tile's picture and is drawn at 96px. It has to be legible as
+// *which game* from across a room, and it never carries the game's name as text
+// — the caption is the text. Inline SVG in `currentColor` and an `<img>` both
+// qualify: sudoku's mark is drawn here, and Pit's is the back of its own card,
+// which is the one image in that set claiming no commodity.
 
 /**
  * @typedef {{ key: string, title: string, href: string, accent: string, blurb: string, art: string }} Game
@@ -31,5 +32,17 @@ export const GAMES = [
       <text x="31.5" y="37" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="currentColor">3</text>
       <text x="49.5" y="55" font-family="system-ui, sans-serif" font-size="14" font-weight="700" fill="currentColor">8</text>
     </svg>`,
+  },
+  {
+    key: 'pit',
+    title: 'Pit',
+    href: '/pit/',
+    // `--pit` in public/pit/ui/pit.css, written twice on purpose: the hub cannot
+    // import a game's stylesheet and the game cannot import this list, and one
+    // saturated accent per game used in both places is what
+    // docs/design-language.md §4 asks for.
+    accent: '#ffb02e',
+    blurb: 'Trade fast, fill your basket',
+    art: '<img src="/pit/art/cards/back.webp" alt="" width="96" height="96" decoding="async">',
   },
 ];

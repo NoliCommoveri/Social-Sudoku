@@ -1,10 +1,17 @@
-// The client half of identity: four calls, and one rule about what happens when
-// the gate says no.
+// The client half of identity and the record: six calls, and one rule about what
+// happens when the gate says no.
 //
 // The shell is a static file and cannot be gated (worker/index.js says why), so
 // the first thing any hub screen does is ask for data and find out. A 401 here
 // is not an error to render — it is a navigation to /gate, carrying where we
 // were so the gate can put us back.
+//
+// The two record calls are the exception, and pass `{ gate: false }`. Every
+// other call is made by a screen with nothing to show without it, where going to
+// the gate is the right answer. Those two are made by a screen with a game
+// running on it, and a cookie that expired mid-session must not throw away the
+// round in progress — the 401 comes back as an ApiError for the game to say
+// something about instead.
 //
 // Nothing in here touches the DOM, and nothing outside it calls fetch.
 
@@ -33,9 +40,11 @@ function here() {
 /**
  * @param {string} path
  * @param {RequestInit} [init]
+ * @param {{ gate?: boolean }} [options] `gate: false` reports a 401 rather than
+ *   navigating to it, which is what a screen mid-game needs
  * @returns {Promise<any>}
  */
-async function call(path, init) {
+async function call(path, init, { gate = true } = {}) {
   let response;
   try {
     response = await fetch(path, { ...init, headers: { accept: 'application/json', ...(init && init.headers) } });
@@ -46,6 +55,7 @@ async function call(path, init) {
   }
 
   if (response.status === 401) {
+    if (!gate) throw new ApiError('The gameroom wants the passphrase again.', 401);
     location.replace(`/gate?next=${encodeURIComponent(here())}`);
     // The navigation is asynchronous; nothing after this should render.
     throw new ApiError('Going to the gate…', 401);
@@ -131,4 +141,46 @@ export function updatePlayer(id, changes) {
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(changes),
   });
+}
+
+/**
+ * Open a row for a game that has just been dealt.
+ *
+ * The id and the timestamp are the Worker's, not this call's: a client that
+ * chose its own id could overwrite somebody else's row, and a client that sent
+ * its own clock would put a kid's phone time in the play log
+ * (docs/identity-and-stats.md §4.1).
+ *
+ * `config` is what the game needs to describe itself a year later — for Pit, the
+ * table as it was dealt. It is capped at 4KB by the Worker.
+ *
+ * @param {{ game: string, mode: string, config?: unknown }} play
+ * @returns {Promise<{ id: string, started_at: number }>}
+ */
+export function startPlay(play) {
+  return call('/api/plays', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(play),
+  }, { gate: false });
+}
+
+/**
+ * Close it. `result: null` is a game nobody finished, which is a row worth
+ * having rather than a row to leave open.
+ *
+ * The result's author is the `who` cookie's player and nothing this call sends
+ * can change that, which is the whole reason the cookie is signed.
+ *
+ * @param {string} id
+ * @param {{ rank?: number | null, outcome: string, value?: number | null,
+ *           unit?: string | null, detail?: unknown } | null} result
+ * @returns {Promise<{ ok: true }>}
+ */
+export function endPlay(id, result) {
+  return call(`/api/plays/${encodeURIComponent(id)}/end`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ result }),
+  }, { gate: false });
 }

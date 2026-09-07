@@ -6,7 +6,7 @@
 // tap arrives as a target, `present.js` says what it means, the room is sent
 // the action. Nothing in between recomputes the game.
 
-import { getPlayers } from '../../shared/api.js';
+import { getPlayers, startPlay, endPlay } from '../../shared/api.js';
 import { avatarSvg } from '../../shared/avatars.js';
 import { HAND, MAX_OFFER } from '../core/commodities.js';
 import { createLocalRoom, seatLimits } from '../room/local.js';
@@ -38,6 +38,9 @@ const state = {
   hand: null,        // the previous hand, for the receipt
   receiptAt: 0,
   repaint: 0,
+  opening: null,     // the `plays` row being opened, in flight
+  playId: null,      // and its id, once there is one
+  levels: {},        // which level a bot seat is playing at, for the record
 };
 
 /* ---------------------------------------------------------------- getting in */
@@ -139,6 +142,7 @@ function refreshSetup() {
 /* -------------------------------------------------------------------- deal */
 
 function deal() {
+  const config = configFrom(state.choices);
   const { seats, faces } = buildSeats({
     me: state.me,
     botCount: state.choices.botCount,
@@ -152,7 +156,7 @@ function deal() {
 
   state.faces = faces;
   state.table = createTable($('table'), { faces, onTarget: tapped });
-  state.room = createLocalRoom({ seats, config: configFrom(state.choices), seed });
+  state.room = createLocalRoom({ seats, config, seed });
   state.room.onView(onView);
   state.room.onEvent((event) => state.table.animate(event));
   state.room.onRefusal(({ reason }) => {
@@ -167,12 +171,41 @@ function deal() {
   $('quit').addEventListener('click', () => {
     // The client's own confirmation, not the rules module's: with one human at
     // the table `abandon` ends the session in one press.
-    if (confirm('End the game? Nothing is saved either way.')) tapped({ kind: 'abandon' });
+    if (confirm('End the game? No score is saved.')) tapped({ kind: 'abandon' });
   });
   $('leave').addEventListener('click', () => state.room.leave());
 
   show('table');
   state.room.join(state.me.id);
+
+  // The row opens here rather than at the end, so a phone that gets locked
+  // mid-game leaves a play with no ending instead of leaving nothing at all
+  // (docs/identity-and-stats.md §4.1). It is not awaited and nothing waits on
+  // it: a failure leaves `playId` null, the end call is skipped, and the ending
+  // screen says so. The game does not stop for the record.
+  //
+  // The commodities and their values go in because they are what makes a row
+  // readable a year later — *that was the game where kiwi was worth 55* — and
+  // they are known by the time the first view lands, which is now.
+  state.levels = Object.fromEntries(seats.map((seat) => [seat.playerId, seat.botLevel ?? null]));
+  state.opening = startPlay({
+    game: 'pit',
+    mode: 'bots',
+    config: {
+      seats: seats.map((seat) => ({
+        name: seat.name,
+        isBot: seat.isBot === true,
+        botLevel: seat.botLevel ?? null,
+      })),
+      target: config.target,
+      autoCorner: config.autoCorner,
+      botLevel: state.choices.botLevel,
+      commodities: [...state.view.commodities],
+      values: { ...state.view.values },
+    },
+  })
+    .then((play) => { state.playId = play.id; })
+    .catch(() => { state.playId = null; });
 
   // Which C are in play is not known until the deal, so a <link rel=preload> in
   // the head cannot name them. Twelve kilobytes apiece makes the whole set
@@ -257,10 +290,79 @@ function finish(outcome) {
   removeEventListener('scroll', interacted);
   state.room.leave();
 
-  // Nothing is written yet: `POST /api/plays` is the second half of this
-  // session, and until it exists the sentence says what is true.
-  drawEnding(outcome, 'none');
+  // Drawn twice: once with the sentence that is true while the call is in
+  // flight, once with the answer. An abandoned session has nothing to save and
+  // says so in both.
+  const abandoned = outcome.abandoned === true;
+  drawEnding(outcome, abandoned ? 'none' : 'saving');
   show('ended');
+  writeRecord(outcome, abandoned).then((record) => drawEnding(outcome, record));
+}
+
+/**
+ * Closing the row, and what the ending screen gets to say about it.
+ *
+ * An abandoned session still closes its row — with no result, which is what an
+ * abandoned game looks like in the record — and still reads as *Nothing to
+ * save*, because there was no result to save.
+ *
+ * There is no retry and no queue. A trading game against bots is not worth an
+ * offline outbox, and pretending otherwise would be a mechanism nobody could
+ * test.
+ *
+ * @param {object} outcome
+ * @param {boolean} abandoned
+ * @returns {Promise<'saved' | 'failed' | 'none'>}
+ */
+async function writeRecord(outcome, abandoned) {
+  await state.opening;
+  if (state.playId === null) return abandoned ? 'none' : 'failed';
+  // Phase 7: the room writes every seat's result itself, and this client's post
+  // would be a second row for the same play.
+  if (outcome.recorded === true) return 'saved';
+
+  const result = abandoned ? null : resultFor(outcome);
+  try {
+    await endPlay(state.playId, result);
+    return result === null ? 'none' : 'saved';
+  } catch {
+    return abandoned ? 'none' : 'failed';
+  }
+}
+
+/**
+ * The human seat's row. Only one is written: `play_results.player_id` references
+ * a profile and a bot is not one, so the bots' final scores travel in the
+ * detail, which is where the table as it came out belongs anyway.
+ *
+ * `outcome` is `'won'` at rank 1, ties included, and `'lost'` otherwise — losing
+ * to a bot is a true thing to have written down.
+ *
+ * @param {object} outcome
+ */
+function resultFor(outcome) {
+  const seats = outcome.seats ?? [];
+  const mine = seats.find((seat) => seat.playerId === state.me.id);
+  if (!mine) return null;
+
+  return {
+    rank: mine.rank ?? null,
+    outcome: mine.rank === 1 ? 'won' : 'lost',
+    value: mine.score,
+    unit: 'points',
+    detail: {
+      corners: mine.corners ?? 0,
+      rankOf: seats.length,
+      seats: seats.map((seat) => ({
+        name: seat.name,
+        isBot: seat.isBot === true,
+        botLevel: state.levels[seat.playerId] ?? null,
+        score: seat.score,
+        corners: seat.corners ?? 0,
+        rank: seat.rank ?? null,
+      })),
+    },
+  };
 }
 
 function drawEnding(outcome, record) {

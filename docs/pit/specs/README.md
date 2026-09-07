@@ -9,7 +9,7 @@ the rest live only as a row in the table below.
 | 1 | Rules core | [`session-1-rules-core.md`](session-1-rules-core.md) | Medium | ✅ Built |
 | 2 | Bots and the local driver | [`session-2-bots-and-the-local-driver.md`](session-2-bots-and-the-local-driver.md) | Medium | ✅ Built |
 | 3 | The stopped seat, and the table | [`session-3-the-table.md`](session-3-the-table.md) | Large | ✅ Built |
-| 4 | Round end, the session, the record | [`session-4-round-end-and-the-record.md`](session-4-round-end-and-the-record.md) | Large | Next |
+| 4 | Round end, the session, the record | [`session-4-round-end-and-the-record.md`](session-4-round-end-and-the-record.md) | Large | ✅ Built |
 
 Sessions 1–4 are hub Phase 5 and leave a Pit that one person plays against bots
 on one phone. Multiplayer is Phases 6 and 7 — the `GameRoom` Durable Object,
@@ -83,9 +83,9 @@ From `CLAUDE.md`, not from taste.
 - **Pure core.** `public/pit/core/` never touches the DOM, `window`, storage or
   the clock. Every function that needs the time takes `now` as an argument.
   That is what lets `node --test` cover the same code the browser runs.
-- **Rules modules never write.** Pit's result row is posted once by the client
-  in session 4, the same way sudoku solo will post one. In Phase 7 the room
-  posts it and the client stops.
+- **Rules modules never write.** Pit's result row is posted once by the client,
+  the same way sudoku solo will post one. In Phase 7 the room posts it and the
+  client stops.
 - **No build step, no runtime dependencies.** Plain ES modules under
   `public/pit/`, relative imports, served at `/pit/` because that is where the
   files are.
