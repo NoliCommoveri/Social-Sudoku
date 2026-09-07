@@ -91,6 +91,19 @@ rebuilds the geometry, board and keypad; switching difficulty only deals.
 Labels are Easy, Medium and Hard. Not tier numbers: a number is a thing to work
 out, and the youngest player is 11.
 
+Both rows live in a popover hung off one button in the top bar, which reads as
+the board you are on — `9×9 · Easy` — rather than as the word *Options*. Two
+reasons, both from the phone. Six always-visible choices between the grid and
+the keypad cost about a third of a 360×740 screen, and the board and the whole
+keypad have to be visible at once or the player scrolls between looking and
+tapping. And a row of buttons that changes the puzzle, sitting where a thumb
+rests, gets pressed by accident mid-solve. In the top layer it covers the board
+instead of moving it, light-dismisses on the next tap anywhere, and closes
+itself as soon as a choice is made.
+
+The board gives way before the keypad does: below roughly 740px of viewport the
+square shrinks rather than pushing the bottom keys off-screen.
+
 Saved games are keyed by size *and* difficulty, so neither picker destroys a
 board in progress. Nine keys in `localStorage`, a few hundred bytes each. The
 saved record carries its `tierId`, so one written before difficulties existed

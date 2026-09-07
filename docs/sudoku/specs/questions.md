@@ -319,6 +319,37 @@ Pit's word for the button — **Harvest!** — is worth asking the little ones a
 while the phone is in their hands (`../../pit/design.md` §2.4). If they call it
 something else every time, that is the name.
 
+### S11 — Check the board chooser and the win popup on the phone
+
+Two sudoku changes whose whole point is how they feel in a hand, so no test
+reaches either. On the Android phone, in portrait, and again on the Chromebook.
+
+1. **Open `/sudoku/` and look without scrolling.** The whole grid and every
+   keypad key, including **New game**, have to be on the screen at once. If
+   anything is below the fold, say which phone and how tall its viewport is —
+   `index.html`'s `--reserve` is the number that is wrong.
+2. **Play half a puzzle without opening the chooser.** The question is whether
+   the top-bar button gets pressed by accident now. It should not; if it does,
+   it is too close to the board.
+3. **Open the chooser and change size, then difficulty.** It should cover the
+   board rather than move it, close on the choice, and close on a tap anywhere
+   else. Each board you left should still be where you left it when you go
+   back.
+4. **Finish a 4×4 easy and watch the 5-year-old's face.** That is the criterion.
+   Then ask whether they can get out of the popup on their own — two buttons,
+   and a tap on the dark ground also works, but only one of those is
+   discoverable.
+5. **Finish three more and read the lines.** They should not repeat back to
+   back, and the 12-year-old should not find any of them babyish. If one of
+   them lands badly, `celebrate.js`'s `LINES` is a list to edit.
+6. **Turn on reduced motion** (Android: Settings → Accessibility) and finish
+   one. The dialog and the words stay, the confetti and the pop go. If the
+   celebration stops reading as a celebration, the words are doing too little
+   work.
+7. **On the Chromebook, finish one with the keyboard only.** Focus should land
+   in the dialog, Escape should close it, and focus should come back to the
+   board.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
