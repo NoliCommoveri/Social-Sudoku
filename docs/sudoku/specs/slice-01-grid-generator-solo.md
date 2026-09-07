@@ -263,6 +263,12 @@ same popup, because the same popup has to land for a 5-year-old and a
 subtitle names the board and how many squares were theirs, which is a better
 thing to be told than *solved*.
 
+Every line is short enough to hold one row at 360px — about eighteen characters
+at the size it is set — because a shout that wraps is not a shout. The slang
+half is the players' own and it is the half that dates; nothing depends on the
+list's contents, so replacing a line is one string edited in the GitHub web
+editor, by whoever is being congratulated.
+
 It holds no game state. `app.js` decides when a puzzle is finished and hands it
 the subtitle and the two things to do next. Under `prefers-reduced-motion` the
 dialog and the words stay and the movement goes, because none of the movement

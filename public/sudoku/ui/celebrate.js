@@ -12,20 +12,39 @@ const STILL = window.matchMedia('(prefers-reduced-motion: reduce)');
 // Said out loud by an 11-year-old and a 4-year-old alike. Mixed registers on
 // purpose: the same popup has to land for both, and one of them thinks "great
 // job" is what you say to a toddler.
+//
+// The slang half is the players' own list, not a guess, and it is the half with
+// a shelf life — a word that lands this year reads as a try-hard adult next
+// year. So this is a flat list of strings and nothing else depends on its
+// contents: crossing one out and typing another over it in the GitHub web
+// editor is the whole edit, and it is meant to be done by whoever is being
+// congratulated.
+//
+// Short on purpose. The line is set large enough to be read across a room, and
+// at 360px that is about eighteen characters before it wraps and stops reading
+// as a shout.
 const LINES = [
   'Great job!',
   'Nice work!',
   'Bruh, you slayed!',
+  'Major W!',
+  'Sigma move.',
+  'Massive aura!',
+  'Elite. No cap.',
+  'You cooked!',
+  'The G.O.A.T!',
+  'So based.',
+  'Skibidi good!',
   'Boom. Solved.',
   'You got it!',
   'Big brain!',
   'Nailed it!',
   'Absolute legend.',
   'Too easy for you.',
-  'Sudoku destroyed.',
+  'Destroyed it!',
 ];
 
-const MARKS = ['🎉', '🌟', '🔥', '🏆', '💥', '🚀'];
+const MARKS = ['🎉', '🌟', '🔥', '🏆', '💥', '🚀', '😎', '💯', '🧠', '⚡'];
 
 const CONFETTI_COLORS = ['#ffb02e', '#1a56b8', '#1f8a4c', '#e0457b', '#7b4ce0', '#2ec5c5'];
 const CONFETTI_COUNT = 26;
