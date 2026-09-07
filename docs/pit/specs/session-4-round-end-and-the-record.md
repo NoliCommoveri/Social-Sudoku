@@ -523,9 +523,9 @@ Everything about how the panel feels in a hand is **S12** in
 
 ## 10. The device check
 
-**S12**, after this session is deployed. It needs **S6** — the schema has to be
-applied before anything can be written — and it verifies the record through
-`/admin`'s JSON export, because nothing reads the log until Phase 3.
+**S12**. The schema is applied, so the record has somewhere to go; the check
+verifies it through `/admin`'s JSON export, because nothing reads the log until
+Phase 3.
 
 That dependency is the honest cost of building the write half first: for one
 phase, the only way to see what was written is to download it.

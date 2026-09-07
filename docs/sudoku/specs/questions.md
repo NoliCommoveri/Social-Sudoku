@@ -18,12 +18,12 @@ This file is the current unknowns, not a log of resolved ones.
 
 ### S1 — Connect this repo to Cloudflare Workers ✅ done
 
-The repo builds and deploys on push to `main`, serving at a `.workers.dev` URL.
+The repo builds and deploys on push to `main`, serving at `games.immotus.app`.
 Build command empty, deploy command the wrangler default, both correct.
 
-The remaining Cloudflare setup — retiring the old `social-sudoko` Worker, the
-D1 database, the two secrets, and the custom domain `games.immotus.app` — is hub
-work and lives in `../../architecture.md` §8, not here.
+The rest of the Cloudflare setup — the Worker, the D1 database, the two secrets
+and the domain — is hub work and lives in `../../architecture.md` §8, not here.
+All of it is done.
 
 ### S2 — Verify slice 1 on the phone and the Chromebook
 
@@ -34,7 +34,7 @@ the point of trying to call slice 1 done.
 
 Order matters — each step needs the one above it.
 
-1. **S1 is done** and the `.workers.dev` URL loads. *(criterion
+1. **S1 is done** and `games.immotus.app` loads. *(criterion
    2)*
 2. **On the Android phone, open `/dev.html` and press "time 100 deals".** Report
    the p95 it prints. Under 250ms passes; over 1s is a hard fail and sends
@@ -92,53 +92,12 @@ old.
 Answer 2 with a rough time and whether anyone got stuck, not a yes or no. It is
 the only measurement in this project that a test cannot take.
 
-### S6 — Check the database and the admin page on the deployment
-
-Phase 2 Session A's behaviour lives entirely in a Worker talking to D1, and
-there is no `wrangler dev` here — the loop is push, wait for the build, open the
-page. None of this can be closed by CI or by me. **A2** is done — the `gameroom`
-database exists and its id is in `wrangler.jsonc` — so everything below is
-reachable as soon as this is on `main` and Cloudflare has built it.
-
-Any browser, either device. In this order — each step is the setup for the next.
-
-1. **Open `/admin` on the fresh database.** Everything pending, no error, and a
-   line saying the database has no tables yet. Nothing red.
-2. **Press Apply pending.** The migration goes to *applied* with a timestamp.
-   Press it again: "Nothing pending."
-3. **Press Run seed.** Six players go in. Press it again: it says it ran, and
-   nothing changes — that is the ON CONFLICT rule doing its job, and it is what
-   makes editing `seed_players.sql` a safe way to fix a name.
-4. **Edit `seed_players.sql`** — change a screen name — commit, wait for the
-   build, press Run seed. The name does *not* change, because the row exists.
-   That is correct and is the thing to know before Session C: renaming a player
-   is the picker's job, not the seed file's.
-5. **Edit `001_schema.sql`** — a comment is enough — commit, wait, reload
-   `/admin`. It must show **drifted** in red with both checksums, and Apply
-   pending must not reapply it. Put the comment back afterwards.
-6. **Break `001_schema.sql` on purpose** — delete a closing bracket — commit,
-   wait, and on a *fresh* database press Apply pending. The page must print the
-   failing statement and SQLite's message, and the migration must still read as
-   pending. Undo it afterwards.
-7. **Open `/` and `/sudoku/`.** Unchanged: same board, same behaviour, no sign
-   anywhere that a database exists.
-
-Step 6 is the one worth the trouble. It is what pays for the machinery that
-names the failing statement, and there is nowhere else to see an error from a
-migration.
-
-Steps 5 and 6 both need a way back to a clean database. **Erase everything** is
-it, and it is built — take the backup it asks for first, then Erase → Apply
-pending → Run seed. Doing these checks now rather than after Phase 3 is still
-the cheap moment: the only rows in the database are six seeded placeholders.
-
 ### S7 — Check erase, export and re-import on the deployment
 
 Phase 2 Session B's acceptance criteria 2–8
-(`../../hub/specs/phase-2-session-b-erase-export.md` §9). Same loop as **S6** —
-push, wait for the build, open the page — and reachable as soon as this is on
-`main` and Cloudflare has built it. Do **S6** first: this needs a database with
-the schema applied and the six players seeded, which is what S6 leaves behind.
+(`../../hub/specs/phase-2-session-b-erase-export.md` §9). The loop is push,
+wait for the build, open the page. The database it needs — schema applied, six
+players seeded — is the one that is deployed now.
 
 Every route was driven end to end against a real SQLite before it shipped —
 apply, seed, export, all three erase refusals, erase with live foreign keys, the
@@ -167,63 +126,18 @@ and whether the file input works there. Those are why this list exists.
 7. **Import a deliberately broken file** — delete a bracket in a copy — and
    check it is refused with a sentence naming the problem rather than a wall of
    SQLite errors.
-8. **Open `/` and `/sudoku/`.** Unchanged, as in S6 step 7.
+8. **Open `/` and `/sudoku/`.** Unchanged: same board, same behaviour, no sign
+   anywhere that a database exists.
 
 Step 6 leaves the schema changed. Put `001_schema.sql` back afterwards, erase,
 apply and seed again — which is now a browser action rather than a trip to the
 Cloudflare dashboard, and is the point of the session.
 
-### S8 — Check the gate, the picker and the shelf on the phone
-
-Phase 2 Session C's acceptance criteria 2–10
-(`../../hub/specs/phase-2-session-c-gate-picker-shelf.md` §9). This is the
-first phase whose subject is a screen rather than a database, so most of it can
-only be answered by watching somebody use it.
-
-**Blocked on setup task A3** — `FAMILY_PASSPHRASE` and `SESSION_SECRET` in the
-Cloudflare dashboard. Until they are set, `/gate` says so and nobody gets in.
-Do **S6** and **S7** first: this needs the schema applied and the six players
-seeded.
-
-Do it on the Android phone, in portrait, on a device that has never opened the
-site. Steps 1–7 are yours; steps 8 and 9 are the ones that actually decide
-whether H5 holds, and they are somebody else's.
-
-1. **Open `/`.** It should show a moment of "Opening the gameroom…" and then the
-   gate. Type the word wrong once: it says so and does not let you in. Type it
-   right: you land on the picker. *(criteria 2, 3)*
-2. **Tap your own face.** The shelf, with your face in the bar and the ring on
-   your tile in the strip below. Everybody's face is visible without scrolling.
-   *(criterion 4)*
-3. **Close the tab and open `/` again.** Straight to the shelf, still you, no
-   gate. *(criterion 5)*
-4. **Tap the bar, then tap somebody else.** You are them. Tap the bar again and
-   choose **Nobody**: the picker comes back and stays until somebody is chosen.
-   *(criterion 6)*
-5. **Tap the Sudoku tile, play a couple of cells, then use the back link.** The
-   shelf, as you left it. *(criterion 7)*
-6. **Look for anything smaller than a thumb, and for horizontal scroll.**
-   Nothing on the hub should be under 64px or need a sideways drag. Do this on
-   the Chromebook too — it should be the same layout with more air, not a
-   different one. *(criterion 8)*
-7. **Open `/admin`** on a device that never answered the gate: it works, which
-   is deliberate. Then change `FAMILY_PASSPHRASE` in the dashboard and reload
-   `/`: every device asks again. Put it back. *(criteria 9, 10)*
-8. **Can the 5-year-old get from the front page into a game, alone, first
-   try?** Watch, do not coach. Where they hesitate is the finding, and "they
-   tapped the wrong face" is the most useful answer this list can produce.
-9. **Does the 12-year-old open it a second time without being asked?** Takes a
-   week to read and is the only honest measure of H5.
-
-Steps 8 and 9 are `design-language.md` §5's two questions, and they are the
-reason the rest of this exists. A "no" on either is not a bug report — it is the
-shelf reopening.
-
 ### S9 — Check making and changing a profile, on the phone
 
 Phase 2 Session D's acceptance criteria 2–8
-(`../../hub/specs/phase-2-session-d-editing-a-profile.md` §7). Do **S8** first:
-this needs somebody through the gate and a picker with faces on it.
+(`../../hub/specs/phase-2-session-d-editing-a-profile.md` §7). The gate, the
+picker and the faces it needs are all up.
 
 On the Android phone, in portrait.
 
@@ -258,8 +172,8 @@ editor are in the wrong place, and that is a design change rather than a bug.
 
 Pit session 3's acceptance criteria that no test reaches
 (`../../pit/specs/session-3-the-table.md` §11). Do it after session 3 is built
-and deployed. Needs **S8** — the table asks who you are and sends you to the
-gate if it does not know.
+and deployed. The table asks who you are and sends you to the gate if it does
+not know, and the gate is up, so nothing blocks this.
 
 The subject is a live screen with a clock under it, so most of this is watching
 rather than checking. On the Android phone, in portrait.
@@ -353,9 +267,9 @@ reaches either. On the Android phone, in portrait, and again on the Chromebook.
 ### S12 — Check the reveal, the ending and the record on the phone
 
 Pit session 4's acceptance criteria that no test reaches
-(`../../pit/specs/session-4-round-end-and-the-record.md` §9). Needs **S10**, and
-needs **S6** as well: nothing can be written until the schema has been applied,
-and until Phase 3 the only way to read a written row is `/admin`'s export.
+(`../../pit/specs/session-4-round-end-and-the-record.md` §9). Needs **S10**.
+The schema is applied, so the record has somewhere to go; until Phase 3 the only
+way to read a written row is `/admin`'s export.
 
 On the Android phone, in portrait, with four bots and then with eight.
 

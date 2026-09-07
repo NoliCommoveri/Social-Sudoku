@@ -94,8 +94,8 @@ The same way the sudoku layout does: on the actual devices, by the actual
 players. A design criterion nobody owns is a criterion that gets assumed.
 
 Each phase that renders something new adds its device check to
-`docs/sudoku/specs/questions.md` alongside S2, S4 and S5. Phase 2's is **S8**,
-and its last two steps are these:
+`docs/sudoku/specs/questions.md` alongside S2, S4 and S5. Two questions run
+against every one of them, and the hub's screens were checked against these:
 
 - **Can the 5-year-old get from the front page into a game, alone, first try?**
   Watch, do not coach. Where they hesitate is the finding.

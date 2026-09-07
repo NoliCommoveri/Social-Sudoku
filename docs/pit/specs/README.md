@@ -108,6 +108,5 @@ Anything that can only be answered on a phone is an `S`* item in
 person and the device named — not a line in a session's acceptance criteria.
 The table's is **S10**, and it carries `../design.md` §2.6's timing checks as
 well as the layout ones — sixty seconds is tuned against bots and can only be
-judged against people. Session 4's is **S12**, and it needs **S6** as well as S10: the
-record cannot be checked before the schema has been applied, and until Phase 3
-the only way to read a written row is `/admin`'s export.
+judged against people. Session 4's is **S12**, and it runs after S10: until
+Phase 3 the only way to read a written row is `/admin`'s export.

@@ -9,12 +9,12 @@ written out it lands above that, and the reason is §6 — importing into a
 that is a third of the code. Nothing here is cuttable (§1), so the number moves
 rather than the scope.
 
-**Blocked on:** nothing. Session A is on `main`, **A2** is done, and this
-session adds no binding and no secret. It does not wait on **A3** or **S6**.
+**Blocked on:** nothing. It adds no binding and no secret.
 
-**Blocks:** Phase 3, the first phase that writes a row anyone would miss. Also
-unblocks **S6** steps 5 and 6, which need a way back to a clean database and
-currently have to delete the D1 database in the dashboard to get one.
+**Blocks:** Phase 3, the first phase that writes a row anyone would miss. It is
+also the only way back to a clean database without deleting the D1 database in
+the dashboard, which is what makes a schema change a browser action. **S7** is
+the check.
 
 ---
 

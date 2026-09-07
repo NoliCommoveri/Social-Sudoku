@@ -28,7 +28,7 @@ are:
   seat's final hand and the counts it offered — and reaching the target draws
   the standings and says whether the session was written down.
 - 328 tests under `test/`, run by GitHub Actions on every push.
-- A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
+- A Worker, `carson-gameroom`, serving `public/` at `games.immotus.app`, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
   and the admin page at `/admin` that applies it, seeds it, backs it up, erases
@@ -77,16 +77,15 @@ behind a placeholder front page linking to it. No features, no behaviour
 change, no bindings. The 46 tests passing on the moved tree are the proof the
 move was clean.
 
-### Phase 2 — The hub: door, profiles, database
+### Phase 2 — The hub: door, profiles, database ✅
 
 The first phase with a server in it. Delivers **H1** and **H3**.
 
-All four sessions are built. What is left is not code: setup tasks **A3** and
-**A4**, and the browser checks **S6**–**S9**, which can be answered nowhere but
-a deployment.
-
-Setup tasks in `docs/architecture.md` §8. A1 — deleting the Worker left orphaned
-by the rename — comes before the rest of them and before any binding exists.
+All four sessions are built, all four setup tasks in `docs/architecture.md` §8
+are done, and the site is up at `games.immotus.app` with the schema applied, the
+six players seeded and the gate answering. What is left is two browser checks
+that can be answered nowhere but a deployment: **S7**, the erase and re-import
+path, and **S9**, the profile editor. Neither blocks another phase.
 
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
 sibling, both rewritten for D1. Four sessions, because the erase/export sibling,
@@ -102,8 +101,8 @@ checksums, applied/pending/drifted — and is the only part CI can reach, becaus
 module that imports SQL and holds no logic. `001_schema.sql` carries `players`,
 `plays` and `play_results`; `seed_players.sql` carries placeholders. The admin
 page renders before login and before any table exists, and puts the failing
-statement and its error on the page. **A2** is done; the database is empty until
-**S6** applies the schema from `/admin`.
+statement and its error on the page. The deployed database has the schema
+applied and the six placeholders in it.
 
 **Session B — erase, export, re-import.** Medium, ~45k. ✅ Built.
 [`docs/hub/specs/phase-2-session-b-erase-export.md`](docs/hub/specs/phase-2-session-b-erase-export.md)
@@ -127,8 +126,9 @@ nothing else: the shell is a static file served before the Worker runs, so it
 renders a spinner and no data until `/api/players` answers, and `/admin` stays
 exempt because a gated `/admin` is a database that can never be brought up.
 `public/shared/` gains the tokens, the thirty avatars, the game list and the
-client's two calls; `public/hub/` is the picker and the shelf. Needs **A3** to
-be usable at all, and **A4** follows it. **S8** is the browser half.
+client's two calls; `public/hub/` is the picker and the shelf. Checked on the
+phone: the gate, the picker, the shelf and the passphrase change all do what
+§9's table says.
 
 **Session D — editing a profile.** Small–Medium, ~30k. ✅ Built.
 [`docs/hub/specs/phase-2-session-d-editing-a-profile.md`](docs/hub/specs/phase-2-session-d-editing-a-profile.md)
@@ -274,30 +274,30 @@ not exist at all until Phase 2.
 
 ## Open items
 
-`docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
-and **S5** — the device checks on the phone and Chromebook that no test can
-close, all about the board — and **S6**, **S7**, **S8** and **S9**, which can be
-checked nowhere but a deployment. They run in that order: S6 leaves a database
-with the schema and the six players in it, S7 erases and rebuilds it, S8 needs
-both plus setup task **A3**, without which nobody can get past the gate, and S9
-is the editor, which needs somebody to be through it.
+`docs/sudoku/specs/questions.md` holds the browser checks. The setup tasks are
+done and the site is up, so nothing in that file is blocked on anything but
+somebody's time and a phone.
+
+Open: **S2**, **S4** and **S5** — the device checks on the phone and Chromebook
+that no test can close, all about the board — plus **S7**, the hub's erase,
+export and re-import, and **S9**, the profile editor.
 
 S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
 board and keypad fit above the fold, which is the same question S2 asks and the
 one the top bar moved.
 
-**S10** is Pit's table, and the table is built: it runs after S8, on a
-deployment, at `/pit/` — nothing on the shelf links there until session 4. Its
-last steps are the only reading anybody gets on whether §2.6's sixty seconds is
-the right number for a 5-year-old.
+**S10** is Pit's table, and it is the one to run next: the table is built, the
+tile is on the shelf and `/pit/` is reachable through the gate. Its last steps
+are the only reading anybody gets on whether §2.6's sixty seconds is the right
+number for a 5-year-old.
 
 **S11** is the sudoku board chooser and the win popup, and it needs neither the
-gate nor a database — it can be run on the phone the moment they are deployed.
+gate nor a database — it can be run on the phone now.
 
-**S12** is Pit's reveal, its ending and the record, and it runs after session 4
-is deployed. It needs S6 as well as S10: nothing can be written before the
-schema is applied, and until Phase 3 reads the log the only way to see a written
-row is `/admin`'s export.
+**S12** is Pit's reveal, its ending and the record. It runs after S10, on the
+same sitting if there is time. Its step 6 — abandon a session, then export the
+JSON from `/admin` — is the only evidence the write path does what it says,
+because nothing reads the record until Phase 3.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in
