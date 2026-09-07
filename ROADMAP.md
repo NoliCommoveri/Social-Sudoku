@@ -13,7 +13,8 @@ are:
 
 - Grid model, seeded generator, and clue-count difficulty tiers at 4×4, 6×6 and
   9×9 — `public/sudoku/core/`, about 600 lines, zero dependencies.
-- Solo play with undo, redo, and a check button — `public/sudoku/ui/`.
+- Solo play with undo, redo, a check button, a board chooser in the top bar and
+  a win popup with confetti — `public/sudoku/ui/`.
 - In-progress boards saved per size and tier in `localStorage`.
 - The hub at `public/index.html`: a passphrase gate, the picker, the profile
   editor and the shelf the games sit on, drawing from `public/shared/` — the
@@ -251,17 +252,23 @@ not exist at all until Phase 2.
 
 `docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
-close, all about the board, which nothing since has touched — and **S6**,
-**S7**, **S8** and **S9**, which can be checked nowhere but a deployment. They
-run in that order: S6 leaves a database with the schema and the six players in
-it, S7 erases and rebuilds it, S8 needs both plus setup task **A3**, without
-which nobody can get past the gate, and S9 is the editor, which needs somebody
-to be through it.
+close, all about the board — and **S6**, **S7**, **S8** and **S9**, which can be
+checked nowhere but a deployment. They run in that order: S6 leaves a database
+with the schema and the six players in it, S7 erases and rebuilds it, S8 needs
+both plus setup task **A3**, without which nobody can get past the gate, and S9
+is the editor, which needs somebody to be through it.
+
+S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
+board and keypad fit above the fold, which is the same question S2 asks and the
+one the top bar moved.
 
 **S10** is Pit's table, and the table is built: it runs after S8, on a
 deployment, at `/pit/` — nothing on the shelf links there until session 4. Its
 last steps are the only reading anybody gets on whether §2.6's sixty seconds is
 the right number for a 5-year-old.
+
+**S11** is the sudoku board chooser and the win popup, and it needs neither the
+gate nor a database — it can be run on the phone the moment they are deployed.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in
