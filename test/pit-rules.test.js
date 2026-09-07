@@ -13,7 +13,7 @@ import { HAND, MAX_OFFER, BASE_VALUE } from '../public/pit/core/commodities.js';
 import {
   init, validate, apply, view, tick, isComplete,
   minPlayers, maxPlayers, defaultConfig, held, handSize, cornered,
-  OFFER_TTL_MS, REVEAL_BACKSTOP_MS,
+  OFFER_TTL_MS, REVEAL_BACKSTOP_MS, IDLE_TAKEOVER_MS,
 } from '../public/pit/core/rules.js';
 
 const SEAT_COUNTS = Array.from({ length: maxPlayers - minPlayers + 1 }, (_, i) => minPlayers + i);
@@ -314,7 +314,7 @@ test('harvesting scores the value, ends the round, and returns every escrow', ()
   assert.equal(next.phase, 'roundEnd');
   assert.equal(next.scores.p1, next.values[next.commodities[0]]);
   assert.equal(next.scores.p1, BASE_VALUE, 'commodities[0] is the cheap one');
-  assert.deepEqual(next.harvest, { playerId: 'p1', commodity: next.commodities[0], value: BASE_VALUE });
+  assert.deepEqual(next.harvest, { playerId: 'p1', commodity: next.commodities[0], value: BASE_VALUE, forfeited: false });
   assert.equal(next.offers.length, 0);
   assert.equal(handSize(next.hands.p2), escrowed + 1, 'the escrow came home before the reveal');
   assert.deepEqual(done.events, [{ kind: 'harvest', playerId: 'p1' }]);
@@ -389,9 +389,13 @@ test('an offer past its TTL is gone after a tick and the cards are back', () => 
 });
 
 test('a tick with nothing to do returns the state it got', () => {
-  const state = init(table(4), {}, 41);
-  const done = tick(state, 500);
-  assert.equal(done.state, state);
+  // The first tick of a session seeds the clocks the rules module is given no
+  // `now` to set at init — the idle stamps here, and `botsReadyAt` at a table
+  // with bots in it. From the second tick on, an idle table is silent, which is
+  // what a driver relies on to stop pushing views.
+  const seeded = tick(init(table(4), {}, 41), 500).state;
+  const done = tick(seeded, 1000);
+  assert.equal(done.state, seeded);
   assert.deepEqual(done.events, []);
 });
 
@@ -509,4 +513,38 @@ test('isComplete ranks by score with ties sharing a rank', () => {
   assert.equal(byId.p0.rank, 3, 'a shared first pushes the next rank to three');
   assert.equal(byId.p3.rank, 4);
   assert.equal(byId.p0.name, 'P0');
+});
+
+// The stopped seat (`../docs/pit/design.md` §2.6) moves cards through paths the
+// randomized play above never takes: a bot driving a seat it does not own, and
+// a harvest that scores nothing. Neither may create or destroy a card.
+test('conservation holds across a pause, a takeover and a forfeited harvest', () => {
+  let state = init(table(4), {}, 'stopped');
+  let now = 0;
+  const step = (where) => { assertConserved(state, where); };
+
+  state = tick(state, now).state;                       // seeds the idle clocks
+  step('the seeding tick');
+
+  const commodity = state.commodities.find((c) => state.hands.p0[c]);
+  state = apply(state, 'p0', { type: 'offer', commodity, count: 1 }, 100).state;
+  step('an offer left in escrow');
+
+  state = apply(state, 'p0', { type: 'pause' }, 200).state;
+  state = tick(state, 200 + IDLE_TAKEOVER_MS * 10).state;
+  step('a long pause');
+  state = apply(state, 'p1', { type: 'resume' }, 200 + IDLE_TAKEOVER_MS * 10).state;
+  step('the resume');
+
+  now = 200 + IDLE_TAKEOVER_MS * 11;
+  for (let i = 0; i < 400 && state.phase === 'trading'; i++) {
+    now += 500;
+    state = tick(state, now).state;
+    step(`caretaker tick ${i}`);
+  }
+  assert.ok(state.takenOver.length > 0, 'nobody was taken over');
+  assert.equal(state.phase, 'roundEnd', 'the caretakers never finished a round');
+  assert.equal(state.harvest.forfeited, true, 'a caretaker harvest is a forfeited one');
+  assert.equal(state.harvest.value, 0);
+  step('the forfeited harvest');
 });

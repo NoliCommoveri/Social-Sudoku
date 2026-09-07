@@ -12,7 +12,7 @@
 
 import { mulberry32, shuffled } from './rng.js';
 import { HAND, MAX_OFFER, COMMODITY_KEYS, drawCommodities, valuesFor } from './commodities.js';
-import { botAction, botDelay } from './bot.js';
+import { botAction, botDelay, DEFAULT_LEVEL } from './bot.js';
 
 export const id = 'pit';
 
@@ -32,6 +32,24 @@ export const OFFER_TTL_MS = 20000;
 /** The round-end reveal ends here whether or not everyone pressed through. */
 export const REVEAL_BACKSTOP_MS = 30000;
 
+/**
+ * How long a seat may go without acting before a bot takes it over.
+ * `../../../docs/pit/design.md` §2.6: a four-seat round hangs the moment
+ * somebody puts their phone down, and a frozen board is not something a
+ * 5-year-old waits out.
+ */
+export const IDLE_TAKEOVER_MS = 60000;
+
+/** An abandon proposal nobody seconds clears itself rather than sitting there. */
+export const ABANDON_TTL_MS = 30000;
+
+/**
+ * The level a caretaker bot plays a taken-over seat at. It is not the session's
+ * chosen level: the caretaker's job is to keep the round moving rather than to
+ * win it, and `../../../docs/pit/design.md` §2.6's simulations are at this one.
+ */
+const CARETAKER_LEVEL = DEFAULT_LEVEL;
+
 export const defaultConfig = {
   target: 300,        // five or six rounds, which is one sitting
   autoCorner: false,  // design §2.4: missing your own win is the tension
@@ -48,6 +66,9 @@ const BOT_STRIDE = 0x85ebca6b;
 
 const OK = Object.freeze({ ok: true });
 const refuse = (reason) => ({ ok: false, reason });
+
+/** The three a paused table still accepts. Everything else refuses `paused`. */
+const PAUSE_EXEMPT = ['resume', 'abandon', 'present'];
 
 /* ------------------------------------------------------------------ hands */
 
@@ -156,6 +177,13 @@ export function init(seats, config = {}, seed = 0) {
     botSeq: 0,
     ready: [],
     roundEndsAt: 0,
+    // Per-seat and per-session, parallel to `hands` and `scores` rather than
+    // fields on `seats[]`, which is the static roster.
+    idleSince: {},
+    takenOver: [],
+    forfeit: [],
+    pausedAt: null,
+    abandon: null,
   }, 1);
 }
 
@@ -191,6 +219,9 @@ function deal(state, round) {
     botsReadyAt: {},
     ready: [],
     roundEndsAt: 0,
+    // The penalty is per round. `takenOver` is not reset beside it on purpose:
+    // a phone still in a pocket at the next deal is still in a pocket.
+    forfeit: [],
   };
   delete next.harvest;
   return next;
@@ -211,6 +242,13 @@ const liveOffer = (state, actor) => state.offers.find((offer) => offer.playerId 
 export function validate(state, actor, action) {
   if (!seatOf(state, actor)) return refuse('no-seat');
   if (!action || typeof action.type !== 'string') return refuse('no-action');
+
+  // One guard above the switch rather than a clause in every case: a paused
+  // table is a table where nothing moves, and an action added later cannot
+  // forget to be refused. `pause` lands here too, which is how a second press
+  // refuses with `paused` and not with a reason of its own.
+  if (state.pausedAt !== null && !PAUSE_EXEMPT.includes(action.type)) return refuse('paused');
+
   const hand = state.hands[actor] ?? {};
 
   switch (action.type) {
@@ -249,6 +287,16 @@ export function validate(state, actor, action) {
       if (state.ready.includes(actor)) return refuse('ready');
       return OK;
     }
+    // Any seat may pause and any seat may resume, so that no one child holds
+    // the game (`../../../docs/pit/design.md` §2.6).
+    case 'pause':
+    case 'resume':
+    case 'abandon':
+    case 'present': {
+      if (state.phase === 'over' || state.phase === 'abandoned') return refuse('phase');
+      if (action.type === 'resume' && state.pausedAt === null) return refuse('not-paused');
+      return OK;
+    }
     case 'disconnect':
       return OK;
     default:
@@ -264,17 +312,48 @@ export function validate(state, actor, action) {
  * @returns {{ state: object, events: object[] }}
  */
 export function apply(state, actor, action, now) {
+  const done = dispatch(state, actor, action, now);
+  // The room telling us a socket is gone must not look like presence. A stamp
+  // here would keep a player who has left looking present for another minute,
+  // which is exactly the case takeover exists for.
+  if (action.type === 'disconnect') return done;
+  return stamped(done, actor, now);
+}
+
+function dispatch(state, actor, action, now) {
   switch (action.type) {
     case 'offer': return applyOffer(state, actor, action, now);
     case 'withdraw': return applyWithdraw(state, actor);
     case 'accept': return applyAccept(state, actor, action);
     case 'harvest': return applyHarvest(state, actor, now);
     case 'ready': return applyReady(state, actor);
+    case 'pause': return applyPause(state, actor, now);
+    case 'resume': return applyResume(state, actor, now);
+    case 'abandon': return applyAbandon(state, actor, now);
+    // The only action whose entire effect is the stamp every action already
+    // gets. It exists so that a player deliberating with a thumb on the screen
+    // is distinguishable from one whose phone is in a pocket, and no other
+    // action can say that without also trading.
+    case 'present': return { state, events: [] };
     case 'disconnect': return liveOffer(state, actor)
       ? applyWithdraw(state, actor)
       : { state, events: [] };
     default: throw new Error(`unapplied action ${action.type}`);
   }
+}
+
+/**
+ * Every valid action is evidence its seat is at the table. Done once, around
+ * the dispatch, so an action added later cannot forget it — and a seat a bot
+ * had taken over comes back to its player by the same line.
+ */
+function stamped({ state, events }, actor, now) {
+  const next = { ...state, idleSince: { ...state.idleSince, [actor]: now } };
+  if (!state.takenOver.includes(actor)) return { state: next, events };
+  next.takenOver = state.takenOver.filter((id) => id !== actor);
+  // `forfeit` is deliberately left alone: reclaiming the seat does not undo the
+  // round the bot played it for.
+  return { state: next, events: [...events, { kind: 'reclaim', playerId: actor }] };
 }
 
 // Offered cards leave the hand. Escrow rather than a lock: conservation stays a
@@ -339,7 +418,12 @@ function applyAccept(state, actor, action) {
 
 function applyHarvest(state, actor, now) {
   const commodity = cornered(state.hands[actor]);
-  const value = state.values[commodity];
+  // `../../../docs/pit/design.md` §2.6's penalty: the round still ends, the
+  // reveal still happens, the next round still deals — the cost of a bot having
+  // ended it falls on the seat that left, and on nobody else. Nothing passes to
+  // second place.
+  const forfeited = state.forfeit.includes(actor);
+  const value = forfeited ? 0 : state.values[commodity];
 
   // Every escrow comes home before the reveal, so the hands that are shown are
   // all the cards there are.
@@ -355,7 +439,7 @@ function applyHarvest(state, actor, now) {
       hands,
       offers: [],
       scores: { ...state.scores, [actor]: state.scores[actor] + value },
-      harvest: { playerId: actor, commodity, value },
+      harvest: { playerId: actor, commodity, value, forfeited },
       roundEndsAt: now + REVEAL_BACKSTOP_MS,
       ready: [],
     },
@@ -365,9 +449,66 @@ function applyHarvest(state, actor, now) {
 
 function applyReady(state, actor) {
   const ready = [...state.ready, actor];
-  const waiting = state.seats.some((seat) => !seat.isBot && !ready.includes(seat.playerId));
+  // A taken-over seat is not waited on, or an absent player holds the reveal
+  // open for the whole backstop every round while a bot plays their cards.
+  const waiting = state.seats.some((seat) =>
+    !seat.isBot && !state.takenOver.includes(seat.playerId) && !ready.includes(seat.playerId));
   const next = { ...state, ready };
   return waiting ? { state: next, events: [] } : advance(next);
+}
+
+function applyPause(state, actor, now) {
+  return { state: { ...state, pausedAt: now }, events: [{ kind: 'paused', playerId: actor }] };
+}
+
+/**
+ * Every clock in State is an absolute timestamp, so a pause that only stopped
+ * `tick` would resume by expiring the whole board, opening every bot gate and
+ * taking over every seat in one frame. Resuming moves all four forward by the
+ * span instead, which is the entire reason pause is more than one line.
+ */
+function applyResume(state, actor, now) {
+  const span = now - state.pausedAt;
+  const shift = (map) => {
+    const out = {};
+    for (const key of Object.keys(map)) out[key] = map[key] + span;
+    return out;
+  };
+  return {
+    state: {
+      ...state,
+      pausedAt: null,
+      offers: state.offers.map((offer) => ({ ...offer, expiresAt: offer.expiresAt + span })),
+      roundEndsAt: state.roundEndsAt === 0 ? 0 : state.roundEndsAt + span,
+      idleSince: shift(state.idleSince),
+      // The one `design.md` §2.6 does not name, and the same bug with a
+      // different symptom: without it, resume opens with every bot acting.
+      botsReadyAt: shift(state.botsReadyAt),
+    },
+    events: [{ kind: 'resumed', playerId: actor, span }],
+  };
+}
+
+/**
+ * The second seat exists so that one child cannot end everybody's game. At a
+ * table with one non-bot seat there is nobody to protect, and a confirmation no
+ * bot will ever send would make the session unquittable.
+ */
+function applyAbandon(state, actor, now) {
+  const alone = state.seats.filter((seat) => !seat.isBot).length < 2;
+  const seconded = state.abandon !== null && state.abandon.by !== actor;
+  if (alone || seconded) {
+    return { state: { ...state, phase: 'abandoned' }, events: [{ kind: 'abandoned' }] };
+  }
+  // A second press from the proposing seat is the way out, rather than a fourth
+  // action nobody would find.
+  if (state.abandon !== null) {
+    return { state: { ...state, abandon: null }, events: [{ kind: 'abandon-cancelled', playerId: actor }] };
+  }
+  return {
+    state: { ...state, abandon: { by: actor, at: now } },
+    events: [{ kind: 'abandon-proposed', playerId: actor }],
+  };
 }
 
 /**
@@ -399,8 +540,24 @@ function advance(state) {
  * @returns {{ state: object, events: object[] }}
  */
 export function tick(state, now) {
+  // Returning the state it was given is already how a driver knows not to push
+  // a view, so a paused room goes quiet with no driver change at all. A session
+  // that has ended goes quiet the same way — there is no seat left worth taking
+  // over once nothing can be played.
+  if (state.pausedAt !== null) return { state, events: [] };
+  if (state.phase === 'over' || state.phase === 'abandoned') return { state, events: [] };
+
   const events = [];
   let next = state;
+
+  // Before the phase branches: idleness accrues during the reveal too.
+  const stopped = takeovers(next, now);
+  next = stopped.state;
+  events.push(...stopped.events);
+
+  if (next.abandon !== null && now - next.abandon.at >= ABANDON_TTL_MS) {
+    next = { ...next, abandon: null };
+  }
 
   if (next.phase === 'trading') {
     const expired = next.offers.filter((offer) => offer.expiresAt <= now);
@@ -443,6 +600,41 @@ export function tick(state, now) {
 }
 
 /**
+ * The seats whose players have stopped, and what happens to them.
+ *
+ * `init` is given no clock (`../../../docs/gameroom.md` §4), so an absent stamp
+ * is seeded here rather than read as an infinitely old one — the same shape as
+ * `botsReadyAt` below, and for the same reason: a table nobody has touched
+ * trips the timer a minute after the first tick rather than on it.
+ *
+ * Bot seats are excluded by `isBot` rather than by trusting bots to stamp
+ * themselves. A bot cannot be absent and this timer should not become a
+ * statement about bot scheduling.
+ */
+function takeovers(state, now) {
+  const idleSince = { ...state.idleSince };
+  const takenOver = [...state.takenOver];
+  const forfeit = [...state.forfeit];
+  const events = [];
+  let changed = false;
+
+  for (const seat of state.seats) {
+    if (seat.isBot) continue;
+    const id = seat.playerId;
+    if (idleSince[id] === undefined) { idleSince[id] = now; changed = true; continue; }
+    if (takenOver.includes(id)) continue;
+    if (now - idleSince[id] < IDLE_TAKEOVER_MS) continue;
+    takenOver.push(id);
+    if (!forfeit.includes(id)) forfeit.push(id);
+    events.push({ kind: 'takeover', playerId: id });
+    changed = true;
+  }
+
+  if (!changed) return { state, events };
+  return { state: { ...state, idleSince, takenOver, forfeit }, events };
+}
+
+/**
  * The stream a bot draws from, taken out of state because tick is pure and is
  * given no rng. `botSeq` is session-long and never reset: resetting it per
  * round would hand two rounds the same stream.
@@ -458,8 +650,12 @@ function botRng(state, seq) {
  * per view push, and a Durable Object's work per alarm stays bounded.
  */
 function bots(state, now) {
-  const seated = state.seats.filter((seat) => seat.isBot);
+  // A taken-over seat is driven from here like any other, which is what makes
+  // the caretaker inherit the gating, the one-per-tick rule and the substreams
+  // with no second code path.
+  const seated = state.seats.filter((seat) => seat.isBot || state.takenOver.includes(seat.playerId));
   if (!seated.length) return { state, events: [] };
+  const levelOf = (seat) => (seat.isBot ? seat.botLevel : CARETAKER_LEVEL);
 
   const readyAt = { ...state.botsReadyAt };
   let seq = state.botSeq;
@@ -469,7 +665,7 @@ function bots(state, now) {
   // tick of a round seeds them, or the round would open with a flurry.
   for (const seat of seated) {
     if (readyAt[seat.playerId] === undefined) {
-      readyAt[seat.playerId] = now + botDelay(seat.botLevel, botRng(state, seq++));
+      readyAt[seat.playerId] = now + botDelay(levelOf(seat), botRng(state, seq++));
       changed = true;
     }
   }
@@ -485,11 +681,13 @@ function bots(state, now) {
     // The delay is drawn first and from its own substream, so how long a bot
     // waits cannot depend on how many draws its decision took — the board must
     // not be able to reach the clock even through the stream position.
-    readyAt[seat.playerId] = now + botDelay(seat.botLevel, botRng(state, seq++));
-    const action = botAction(view(state, seat.playerId), seat.botLevel, botRng(state, seq++));
+    readyAt[seat.playerId] = now + botDelay(levelOf(seat), botRng(state, seq++));
+    const action = botAction(view(state, seat.playerId), levelOf(seat), botRng(state, seq++));
     changed = true;
     if (action && validate(state, seat.playerId, action).ok) {
-      const done = apply(state, seat.playerId, action, now);
+      // `dispatch`, not `apply`: a caretaker acting on a seat must not stamp it
+      // present, or the seat would reclaim itself on the bot's first move.
+      const done = dispatch(state, seat.playerId, action, now);
       next = done.state;
       events.push(...done.events);
     }
@@ -524,6 +722,11 @@ export function view(state, viewer) {
     round: state.round,
     phase: state.phase,
     target: state.target,
+    // Absolute, like offer.expiresAt and for the same reason: view() is given
+    // no `now` and must not be, so both countdowns on the screen are a CSS
+    // animation whose duration the client works out once.
+    pausedAt: state.pausedAt,
+    abandon: state.abandon === null ? null : { ...state.abandon },
     commodities: [...state.commodities],
     values: { ...state.values },
     you: {
@@ -541,6 +744,17 @@ export function view(state, viewer) {
       cards: handSize(state.hands[seat.playerId] ?? {}),
       score: state.scores[seat.playerId] ?? 0,
       ready: state.ready.includes(seat.playerId),
+      idleSince: state.idleSince[seat.playerId] ?? null,
+      // The deadline rather than the duration, for the same reason
+      // `offer.expiresAt` is: view() is given no `now`, and a client that had
+      // to be told IDLE_TAKEOVER_MS to work this out would be a client with a
+      // rules constant written down in it. Null for a bot, which cannot be
+      // absent and has no clock running on it.
+      takeoverAt: seat.isBot || state.idleSince[seat.playerId] === undefined
+        ? null
+        : state.idleSince[seat.playerId] + IDLE_TAKEOVER_MS,
+      takenOver: state.takenOver.includes(seat.playerId),
+      forfeited: state.forfeit.includes(seat.playerId),
     })),
     offers: state.offers.map((offer) => ({
       id: offer.id,

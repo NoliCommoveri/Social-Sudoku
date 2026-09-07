@@ -13,16 +13,18 @@ are:
 
 - Grid model, seeded generator, and clue-count difficulty tiers at 4×4, 6×6 and
   9×9 — `public/sudoku/core/`, about 600 lines, zero dependencies.
-- Solo play with undo, redo, and a check button — `public/sudoku/ui/`.
+- Solo play with undo, redo, a check button, a board chooser in the top bar and
+  a win popup with confetti — `public/sudoku/ui/`.
 - In-progress boards saved per size and tier in `localStorage`.
 - The hub at `public/index.html`: a passphrase gate, the picker, the profile
   editor and the shelf the games sit on, drawing from `public/shared/` — the
   tokens, the thirty avatars, the profile rules, and the four calls the client
   makes.
-- Pit's rules core, its bots and its local driver — `public/pit/core/` and
-  `public/pit/room/`. A full session deals, trades, corners, scores and finishes
-  against three bots, driven by a test file and by nothing else. No pixels.
-- 250 tests under `test/`, run by GitHub Actions on every push.
+- Pit at `/pit/`: the rules core, the bots, the local driver and the table —
+  `public/pit/`. One person picks how many bots sit down and plays rounds
+  against them on a phone. A seat left alone is taken over by a bot sixty
+  seconds later and reclaimed by a tap.
+- 302 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
@@ -33,8 +35,9 @@ are:
 
 No Durable Object and no stored results. Profiles are made, renamed and
 re-faced from the hub; nothing a player would miss has been written anywhere
-yet. Pit has rules and no interface — nothing under `public/pit/` is reachable
-from a browser, and the shelf does not offer it.
+yet. Pit is played by typing its address: the round-end reveal, the
+end-of-session screen, the `plays` row and the game's tile on the shelf are
+session 4, and until that tile exists nothing on the front page links to it.
 
 ## The five things this is for
 
@@ -170,26 +173,29 @@ so all three run in a browser tab and the family can play against bots while the
 room is still unwritten. Phase 6 is then written against a rules module that
 exists rather than against `docs/gameroom.md` alone.
 
-**Sessions 1 and 2 are built.** `public/pit/core/` holds the deal, the offer
+**Sessions 1, 2 and 3 are built.** `public/pit/core/` holds the deal, the offer
 board, the blind swap, the corner, the scoring and the confidentiality boundary;
 `core/bot.js` holds the three levels, the target invariant and the latency that
 cannot see the board; `tick` gates the bots, one per tick, because the gate is a
 field of `State` and `State` is opaque to a room. `public/pit/room/local.js` is
 the driver the client talks to and Phase 7 replaces with a socket.
 
-A seat that stops trading freezes its cards, and most four-seat rounds cannot
-then be won by anybody. `docs/pit/design.md` §2.6 settles it and nothing of it
-is built: pause, bot takeover of a seat idle for sixty seconds, and abandon.
-All three are rules actions, so they land before the table can draw a pause
-button, an abandon button, or the takeover countdown — which is why session 3
-carries both halves and is Large where the other three are Medium.
+`docs/pit/design.md` §2.6 is in the rules module: pause, resume, abandon,
+`present`, a per-seat idle clock, and a bot that takes over a seat sixty seconds
+after its player stops and forfeits that seat's round. Without it a four-seat
+round hangs the moment somebody puts their phone down, which is what the
+5-year-old does.
 
-Session 3 is spec'd in
-[`docs/pit/specs/session-3-the-table.md`](docs/pit/specs/session-3-the-table.md)
-and is next: the §2.6 actions and the idle clock first, then the setup screen
-that picks the deck, the hand, the offer board, the two-tap trade, and
-`ui/present.js`, the pure half that carries everything CI could not otherwise
-reach.
+The screen is `public/pit/ui/`. `present.js` is the pure half — a View and one
+object of local intent in, a `Screen` out — and holds every decision the table
+makes, which is what keeps `table.js` down to creating elements and reporting
+taps. Offering and accepting are the same two-tap mechanism against the hand,
+because the hand is the only place a commodity is ever named.
+
+**Session 4 is next and is not spec'd**: the round-end reveal, the harvest
+celebration, the full card art, the end-of-session screen, the `plays` row, and
+the game's tile on the hub shelf. §5.6's plain panel is the stub that lets
+rounds follow one another until then.
 
 ### Phase 6 — GameRoom
 
@@ -246,18 +252,23 @@ not exist at all until Phase 2.
 
 `docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
 and **S5** — the device checks on the phone and Chromebook that no test can
-close, all about the board, which nothing since has touched — and **S6**,
-**S7**, **S8** and **S9**, which can be checked nowhere but a deployment. They
-run in that order: S6 leaves a database with the schema and the six players in
-it, S7 erases and rebuilds it, S8 needs both plus setup task **A3**, without
-which nobody can get past the gate, and S9 is the editor, which needs somebody
-to be through it.
+close, all about the board — and **S6**, **S7**, **S8** and **S9**, which can be
+checked nowhere but a deployment. They run in that order: S6 leaves a database
+with the schema and the six players in it, S7 erases and rebuilds it, S8 needs
+both plus setup task **A3**, without which nobody can get past the gate, and S9
+is the editor, which needs somebody to be through it.
 
-**S10** is Pit's table and is written ahead of the code it checks, so that its
-layout and timing criteria are not discovered at the point of calling session 3
-done. It runs after S8 and after session 3 is deployed. Its last steps are the
-only reading anybody gets on whether §2.6's sixty seconds is the right number
-for a 5-year-old.
+S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
+board and keypad fit above the fold, which is the same question S2 asks and the
+one the top bar moved.
+
+**S10** is Pit's table, and the table is built: it runs after S8, on a
+deployment, at `/pit/` — nothing on the shelf links there until session 4. Its
+last steps are the only reading anybody gets on whether §2.6's sixty seconds is
+the right number for a 5-year-old.
+
+**S11** is the sudoku board chooser and the win popup, and it needs neither the
+gate nor a database — it can be run on the phone the moment they are deployed.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

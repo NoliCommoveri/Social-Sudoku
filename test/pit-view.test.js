@@ -156,7 +156,9 @@ test('the round-end reveal is complete, and only then', () => {
   ended.seats.forEach((seat, index) => {
     assert.deepEqual(seen.reveal[seat.playerId], { [ended.commodities[index]]: HAND });
   });
-  assert.deepEqual(seen.harvest, { playerId: 'p0', commodity: ended.commodities[0], value: ended.values[ended.commodities[0]] });
+  assert.deepEqual(seen.harvest, {
+    playerId: 'p0', commodity: ended.commodities[0], value: ended.values[ended.commodities[0]], forfeited: false,
+  });
 });
 
 test('a seat’s card count is public and excludes what it has offered away', () => {

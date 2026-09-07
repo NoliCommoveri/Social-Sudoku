@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Pit</title>
+<meta name="color-scheme" content="dark light">
+<!-- Inert until the PWA phase brings real icons. Without it every load logs a
+     404, which is noise when debugging on the phone. -->
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="/shared/theme.css">
+<link rel="stylesheet" href="./ui/pit.css">
+</head>
+<body>
+
+<!-- Both screens live in one document. A second file would duplicate the head
+     and the token link, and navigating between them would drop the room the
+     first one built — the setup screen's whole output is a live Room object,
+     which does not survive a page load. -->
+<main id="app">
+
+  <section id="loading" class="screen pad">
+    <p class="note">Opening the table…</p>
+  </section>
+
+  <section id="setup" class="screen pad" hidden>
+    <a class="back" href="/">&larr; Gameroom</a>
+    <h1>Pit</h1>
+
+    <!-- The one control with no default. Nothing is preselected and Deal is
+         dark until a count is tapped: how many bots sit down is also the deck,
+         and a remembered answer is a rule about filling short seats wearing a
+         disguise. -->
+    <h2 class="ask">Who is playing?</h2>
+    <div id="bots" class="tiles" role="group" aria-label="How many bots"></div>
+
+    <h2 class="ask">How good are they?</h2>
+    <div id="levels" class="pills" role="group" aria-label="Bot difficulty"></div>
+
+    <h2 class="ask">How long?</h2>
+    <div id="targets" class="pills" role="group" aria-label="Points to win"></div>
+
+    <h2 class="ask">Take the corner for you?</h2>
+    <div id="auto" class="pills" role="group" aria-label="Auto-harvest"></div>
+
+    <p id="setup-note" class="note" role="status" aria-live="polite"></p>
+    <button type="button" id="deal" class="btn btn-go" disabled>Deal</button>
+  </section>
+
+  <section id="table" class="screen" hidden>
+    <header id="strip" class="strip"></header>
+
+    <ul id="board" class="board" aria-label="Offers on the table"></ul>
+
+    <!-- Holds its height when it is empty. Either a sentence or the count row,
+         never both, never neither. -->
+    <div class="line-wrap">
+      <p id="line" class="line" role="status" aria-live="polite"></p>
+      <div id="counts" class="counts" role="group" aria-label="How many"></div>
+    </div>
+
+    <button type="button" id="harvest" class="harvest" data-target="harvest" disabled>Harvest!</button>
+
+    <div id="hand" class="hand" role="group" aria-label="Your hand"></div>
+
+    <div id="scrim" class="scrim" hidden>
+      <p class="scrim-word">Paused</p>
+      <button type="button" class="btn" data-target="resume">Resume</button>
+    </div>
+
+    <!-- Not reachable at a one-human table, and drawn anyway: it is three lines
+         here and Phase 7 is where finding it missing would be expensive. -->
+    <div id="banner" class="banner" hidden>
+      <p class="banner-text"></p>
+      <button type="button" class="banner-end btn btn-stop" data-target="abandon">End it</button>
+      <button type="button" class="banner-keep btn" data-target="abandon">Never mind</button>
+    </div>
+
+    <div id="sheet" class="sheet" hidden>
+      <button type="button" class="btn" data-target="pause">Pause</button>
+      <button type="button" class="btn btn-stop" id="quit">Abandon game</button>
+      <a class="btn" href="/" id="leave">Leave</a>
+      <button type="button" class="btn btn-quiet" data-target="menu">Back to the game</button>
+    </div>
+
+    <!-- Session 3's stub. The reveal grid, the full card art and the
+         celebration are session 4; without a Next round button here the round
+         advances only on the 30-second backstop. -->
+    <div id="panel" class="panel" hidden>
+      <img class="panel-art" alt="">
+      <p class="panel-who"></p>
+      <p class="panel-note"></p>
+      <button type="button" class="panel-next btn btn-go" data-target="ready">Next round</button>
+    </div>
+  </section>
+
+  <section id="ended" class="screen pad" hidden>
+    <h1 id="ended-title">That is the game.</h1>
+    <ul id="ended-scores" class="scores"></ul>
+    <a class="btn btn-go" href="/pit/">Play again</a>
+    <a class="btn" href="/">Gameroom</a>
+  </section>
+</main>
+
+<noscript>
+  <div class="pad"><p class="note">This page needs JavaScript.</p></div>
+</noscript>
+
+<script type="module" src="./ui/app.js"></script>
+
+</body>
+</html>
