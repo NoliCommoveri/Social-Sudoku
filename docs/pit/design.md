@@ -1,8 +1,8 @@
 # Trading Game ("Pit-style") — Design Spec
 
 **Status:** Phase 5 of `../../ROADMAP.md`, built and played on one device
-against bots. The rules core, the bots and the local driver are built
-(`public/pit/`); the four sessions and their state are in
+against bots. The rules core, the bots, the local driver and the table are
+built (`public/pit/`); the four sessions and their state are in
 [`specs/README.md`](specs/README.md). `GameRoom` (`../gameroom.md`) is Phase 6 and
 takes this rules module unchanged in Phase 7, when Pit becomes the interface's
 first consumer at `games.immotus.app`.
@@ -241,13 +241,6 @@ link. Three seats is not merely worse — at 3.11% it does not work, and
 4, 5 and 6 seats all reached a corner inside five simulated minutes. There is no
 separate bot-deadlock to guard against; the idle seat is the whole failure.
 
-None of what follows is built. The rules module has no pause, no idle timer
-and no abandon, and the local driver has no opinion about any of them —
-`specs/session-2-bots-and-the-local-driver.md` §6 plays its end-to-end session
-with a human seat that takes the occasional trade, which is what a person does
-and is not a fix. All of it lands in session 3, ahead of the screen that draws
-it: `specs/session-3-the-table.md` §2.
-
 **The fix.** Three mechanisms, one per way a seat stops. Together they also
 answer what happens to an abandoned session, which is the same question.
 
@@ -260,8 +253,11 @@ answer what happens to an abandoned session, which is the same question.
   bot corners**. Any valid action from the seat reclaims it immediately. This
   is the answer to the absence nobody chose — a screen lock, a dropped
   connection, a Phase 7 disconnect after the room's grace timer expires.
-- **Abandon game.** Ends the session with no writes. Needs a second seat to
-  confirm, for the same reason pause needs any seat to be able to lift it.
+- **Abandon game.** Ends the session with no result. Needs a second seat to
+  confirm, for the same reason pause needs any seat to be able to lift it. The
+  play itself is still recorded as started and abandoned —
+  `../identity-and-stats.md` §4.1 — which is a row with no result rather than
+  no row.
 
 **The takeover penalty is not anti-cheat.** Walking away cannot help a player,
 so there is nothing to deter. It is there because a bot-won round still *ends*

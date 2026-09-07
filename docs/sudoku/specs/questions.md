@@ -350,6 +350,56 @@ reaches either. On the Android phone, in portrait, and again on the Chromebook.
    in the dialog, Escape should close it, and focus should come back to the
    board.
 
+### S12 — Check the reveal, the ending and the record on the phone
+
+Pit session 4's acceptance criteria that no test reaches
+(`../../pit/specs/session-4-round-end-and-the-record.md` §9). Needs **S10**, and
+needs **S6** as well: nothing can be written until the schema has been applied,
+and until Phase 3 the only way to read a written row is `/admin`'s export.
+
+On the Android phone, in portrait, with four bots and then with eight.
+
+1. **Play a round to a corner and stop at the panel.** Can you tell who won,
+   with what, and for how much, without reading twice? The card, the sentence
+   and the seat blocks are three things saying overlapping parts of one fact,
+   and if one of them is doing nothing it should go.
+2. **Read the counts line against the hands.** *offered 3 · 3 · 2* over a hand
+   of eight kiwis is the thing the panel exists for. If nobody looks at it, say
+   so — it is six words and it comes out.
+3. **Press Next round from the first frame.** It must work while the card is
+   still growing. If it does not, the celebration is blocking and that is a bug
+   rather than a taste question.
+4. **Let the backstop end a round instead.** Thirty seconds of the panel is a
+   long time; the question is whether it feels like a pause or like a hang.
+5. **Play a session out to the target.** Standings, ranks and corners, and the
+   sentence about saving. Watch for the sentence changing from *Saving…* — if it
+   never resolves, the record failed silently, which is the one failure this
+   screen exists to make visible.
+6. **Abandon one deliberately**, then open `/admin`, export the JSON, and look.
+   The finished session is a play with one result row; the abandoned one is a
+   play with an `ended_at` and no result; a game you closed the tab on is a play
+   with no `ended_at`. All three are true things and all three should be there.
+7. **Check the name on the result.** `player_id` is whoever the device is on,
+   not whoever pressed Deal, and this is the only place that gets checked
+   against a real cookie.
+8. **Turn on reduced motion** and finish a round. The card stays, the growth
+   goes. If the panel stops reading as a moment, the card is doing all the work
+   and the sentence is doing none.
+9. **On the Chromebook, finish a round with the keyboard only.** Focus should
+   land on **Next round**; at the end it should land on **Play again**.
+10. **Look at the shelf.** Pit's tile against sudoku's, from across the room.
+    Does the card back read as *this* game, or only as *a card game*?
+    `../../pit/specs/session-4-round-end-and-the-record.md` §6 is the
+    alternative if it does not.
+11. **Ask the 12-year-old what they want to see about a finished game.** Nothing
+    reads the record until Phase 3, so this is the cheapest moment to find out
+    that what gets written is the wrong thing — a schema is easier to change
+    before there are rows in it worth keeping.
+
+Step 6 is the one that cannot be skipped. Everything else on this list is a
+screen somebody can look at again tomorrow; the export is the only evidence that
+the write path does what §5 says.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
