@@ -342,7 +342,11 @@ Per bot turn evaluation:
 
 ### 3.2 The three things that are actually hard
 
-**Reaction timing.** A bot that accepts in 8ms wins every offer and the kids never trade. Bots need randomized latency (**recommendation:** 800–2500ms, sampled per action, scaled by difficulty) and that latency must **not** correlate with how good the trade is. If a bot hesitates on bad offers and pounces on good ones, players will read the tell within one session.
+**Reaction timing.** A bot that accepts in 8ms wins every offer and the kids never trade. Two separate things have to be got right and only one of them is the sampled delay.
+
+Bots need randomized latency, sampled per action and scaled by difficulty, and that latency must **not** correlate with how good the trade is. If a bot hesitates on bad offers and pounces on good ones, players will read the tell within one session. **The range is the table's, not the seat's:** an eight-seat table of bots each pausing a second is a board changing eight times a second, and a per-seat number quietly turns the difficulty setting into a table-size setting.
+
+That alone does not make a block claimable. A delay says how often a bot looks; what a human needs is to be looking first. **Every offer is invisible to every bot for a fixed window after it is posted**, long enough that the person it landed in front of can see the card, find a matching block and press it. Without the window an offer can be taken on the tick after it appears, and a player on a phone spends the round watching trades happen. Difficulty is allowed to move this window — it costs the hard bot a trade the easy bot misses rather than showing either a card it should not see — and `specs/session-2-bots-and-the-local-driver.md` §3 has the numbers.
 
 **Information modeling.** Every posted count is public information. A bot that logs the full count history and infers who is cornering what is genuinely strong — plausibly stronger than the humans. **Recommendation:** cap this deliberately by difficulty. Easy bots see only the current board; hard bots see the last N counts per player. Do not let a bot see everything just because it can.
 

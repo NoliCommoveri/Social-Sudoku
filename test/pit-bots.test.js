@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 
 import { mulberry32 } from '../public/pit/core/rng.js';
 import { HAND, COMMODITY_KEYS, valuesFor } from '../public/pit/core/commodities.js';
-import { botAction, botDelay, targetOf, BOT_LEVELS, DEFAULT_LEVEL } from '../public/pit/core/bot.js';
+import { botAction, botDelay, botNotice, targetOf, BOT_LEVELS, DEFAULT_LEVEL } from '../public/pit/core/bot.js';
 import {
   init, validate, view, tick, tickIntervalMs, minPlayers, maxPlayers, held,
 } from '../public/pit/core/rules.js';
@@ -188,6 +188,76 @@ test('latency lands in the level’s range, and the levels are ordered', () => {
   }
   assert.ok(means.easy > means.normal, `easy ${means.easy} not slower than normal ${means.normal}`);
   assert.ok(means.normal > means.hard, `normal ${means.normal} not slower than hard ${means.hard}`);
+});
+
+test('the table keeps its cadence as bots are added to it', () => {
+  // The bug this is here for: without the divisor the level names a per-seat
+  // rate, so every bot added speeds the board up, and past four seats every
+  // level collapses onto tickIntervalMs and the knob stops meaning anything.
+  const perTurn = (level, seats) => {
+    const rng = mulberry32(11);
+    let sum = 0;
+    for (let i = 0; i < 2000; i++) sum += botDelay(level, rng, seats);
+    return sum / 2000 / seats;
+  };
+  for (const level of BOT_LEVELS) {
+    const solo = perTurn(level, 1);
+    for (let seats = 2; seats <= maxPlayers; seats++) {
+      const ratio = perTurn(level, seats) / solo;
+      assert.ok(ratio > 0.9 && ratio < 1.1, `${level} at ${seats} seats runs ${ratio.toFixed(2)}x the solo table`);
+    }
+  }
+
+  // And that tick passes the seat count rather than leaving the divisor to a
+  // default. Asserted on the gates the first tick seeds rather than on how many
+  // turns a table gets through, because the one-per-tick rule caps throughput at
+  // two a second: an unscaled nine-seat table saturates that cap and so looks
+  // barely faster than a three-seat one right up until the level stops
+  // mattering, which is the failure this is here to see.
+  const gap = (count) => {
+    const state = tick(init(bots(count, 'normal'), {}, `cadence-${count}`), tickIntervalMs).state;
+    const waits = Object.values(state.botsReadyAt).map((at) => at - tickIntervalMs);
+    return (waits.reduce((sum, wait) => sum + wait, 0) / waits.length) / count;
+  };
+  const small = gap(minPlayers);
+  const full = gap(maxPlayers);
+  assert.ok(
+    full > small * 0.6 && full < small * 1.6,
+    `a seat at a ${maxPlayers}-bot table waits ${(full / small).toFixed(2)}x its share of what one at a ${minPlayers}-bot table waits`,
+  );
+});
+
+test('nobody takes a block before the table has had time to look at it', () => {
+  // The whole of "I cannot claim a trade": a bot decides on the next tick, so
+  // without the window an offer can be gone 500ms after it lands, which is less
+  // than the time it takes a person to find a matching block and press it.
+  for (const level of BOT_LEVELS) {
+    const window = botNotice(level);
+    assert.ok(window > tickIntervalMs, `${level} gives no more warning than one tick`);
+    for (const count of SEAT_COUNTS) {
+      const seats = bots(count, level);
+      let state = init(seats, {}, `notice-${level}-${count}`);
+      let now = 0;
+      let traded = 0;
+      for (let i = 0; i < 600 && state.phase !== 'over'; i++) {
+        const before = new Map(state.offers.map((offer) => [offer.id, offer]));
+        now += tickIntervalMs;
+        const done = tick(state, now);
+        if (done.events.some((event) => event.kind === 'trade')) {
+          for (const [id, offer] of before) {
+            if (done.state.offers.some((live) => live.id === id)) continue;
+            traded++;
+            assert.ok(
+              now - offer.postedAt >= window,
+              `${level} took a ${now - offer.postedAt}ms-old block, window ${window}ms`,
+            );
+          }
+        }
+        state = done.state;
+      }
+      assert.ok(traded > 0, `no ${level} bot traded at ${count} seats`);
+    }
+  }
 });
 
 test('an unrecognised level plays as normal rather than crashing', () => {

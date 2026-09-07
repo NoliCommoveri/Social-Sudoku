@@ -14,7 +14,7 @@ replaces it with a socket to `GameRoom` and the client does not notice.
 ## 1. Files
 
 ```
-public/pit/core/bot.js        botAction, botDelay, the three levels
+public/pit/core/bot.js        botAction, botDelay, botNotice, the three levels
 public/pit/core/rules.js      tick gains bot gating (edit)
 public/pit/room/local.js      the driver, and bot identity
 
@@ -67,8 +67,10 @@ would otherwise fire four bot actions into one frame; the client gets one
 change per view push, which is what animates legibly; and the Durable Object's
 work per alarm stays bounded.
 
-At `tickIntervalMs = 500` this caps the table at two bot actions a second, which
-is faster than any of the latency ranges in §3 asks for.
+At `tickIntervalMs = 500` this caps the table at two bot actions a second. It is
+a ceiling and not the pace: §3's ranges divide by the number of bot seats
+precisely so that a full table is not sitting on this cap, where every level
+would play identically.
 
 ### 2.2 Seeding the gate
 
@@ -92,11 +94,11 @@ serializes, and the state stays plain JSON.
 `Seat.botLevel` is `'easy' | 'normal' | 'hard'`, defaulting to `'normal'` when
 absent or unrecognised — a typo in a seat list must not crash a game.
 
-| Level | Public history it reads | Latency | Noise |
-|---|---|---|---|
-| `easy` | none — the current board only | 1600–3200ms | 25% |
-| `normal` | the last 8 events | 1000–2200ms | 12% |
-| `hard` | the last 24 events | 800–1600ms | 5% |
+| Level | Public history it reads | Table cadence | Notice | Noise |
+|---|---|---|---|---|
+| `easy` | none — the current board only | 1600–3200ms | 3500ms | 25% |
+| `normal` | the last 8 events | 1000–2200ms | 2500ms | 12% |
+| `hard` | the last 24 events | 800–1600ms | 1500ms | 5% |
 
 **Difficulty is a restriction on what the bot reads, not a handicap applied to
 what it decides.** `../design.md` §3.2 is explicit that a bot logging the whole
@@ -104,11 +106,36 @@ count history and inferring who is cornering what is plausibly stronger than the
 humans; the cap is deliberate. The window is a slice of `view.history`, which
 `deal` resets, so no bot remembers across a round.
 
-**Latency is sampled by a function that cannot see the board.**
-`botDelay(level, rng)` takes the level and the rng and nothing else. That
-signature is the whole guarantee: a bot that hesitated on bad offers and pounced
-on good ones would be read as a tell within one session, and the only way to be
-sure it does not is to make the correlation unexpressible.
+**Cadence is the table's, not the seat's.** `botDelay(level, rng, seats)`
+samples the range above and multiplies it by how many bot-driven seats there
+are, so the column says how often *some* bot takes a turn rather than how often
+one does. A per-seat rate is the wrong knob: it speeds the board up with every
+bot added, and at five seats on `normal` a change lands every 300ms — faster
+than anyone can read, and faster than §2.1 will even deliver, so every level
+collapses onto the tick interval and the difficulty setting stops doing
+anything.
+
+**Latency is sampled by a function that cannot see the board.** `botDelay` takes
+the level, the rng and a seat count fixed for the session, and nothing else.
+That signature is the whole guarantee: a bot that hesitated on bad offers and
+pounced on good ones would be read as a tell within one session, and the only
+way to be sure it does not is to make the correlation unexpressible.
+
+**Notice is first refusal, and it belongs to whoever is slowest.** `tick` hands
+a bot a view with every offer younger than `botNotice(level)` removed from it —
+`rules.js` `noticed()`, which is where it has to live, because the window needs
+`now` and `bot.js` has no clock and must not grow one. Filtering the view leaves
+the purity alone: the bot still decides out of a view, just a smaller board.
+
+Without it the board is unplayable from a phone. A bot decides on the next tick,
+so a block posted between two ticks can be gone 500ms later — before the person
+it landed in front of has seen the card, found a matching block of their own and
+pressed it. The window is the reaction time the bots are pretending to have.
+Level changes it because a slower read is a real handicap and this is the one
+place difficulty is allowed to be one: it costs a hard bot the trade an easy bot
+misses, rather than handing either a card it should not see. A bot's own offer
+is never hidden from it — withdrawing something it already posted is not a race
+with anybody.
 
 **Noise** is one probability, applied once per evaluation: with probability
 `noise` the bot takes a random legal alternative to the action it chose,
@@ -271,6 +298,17 @@ final state.
 **Latency.** Samples land inside the level's range, and the three means are
 ordered `easy > normal > hard`. That `botDelay` cannot see the board is carried
 by its signature, not by a test.
+
+**Cadence.** A seat's wait divided by the seat count is the same at every table
+size, and `tick` passes the count rather than leaving the divisor to its
+default — asserted on the gates the first tick seeds, not on how many turns a
+table gets through, because §2.1's cap saturates and an unscaled full table
+looks barely faster than a small one right up until the level stops mattering.
+
+**Notice.** Over seeded sessions at every level and every seat count, no offer
+that leaves the table on a trade was younger than that level's window. This is
+the test for "I cannot claim a trade": without the filter it catches a 500ms-old
+block, which is one tick.
 
 **A session end to end.** One human seat, three bots, a fake clock stepped at
 `tickIntervalMs`, played until the view reports `over`. The human presses
