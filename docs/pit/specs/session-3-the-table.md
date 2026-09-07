@@ -32,7 +32,7 @@ with §2 half-applied.
 ## 1. Files
 
 ```
-public/pit/core/rules.js       the §2.6 actions, the idle clock, takeover (edit)
+public/pit/core/rules.js       design.md §2.6: the actions, the clock, takeover (edit)
 public/pit/room/local.js       seatLimits, for the setup screen (edit)
 
 public/pit/index.html          setup and table in one document
@@ -57,7 +57,7 @@ survive a page load.
 
 `store/local.js` mirrors sudoku's and holds preferences only. **No game is
 saved.** A trading game against bots that runs on a tick has nothing meaningful
-to resume into; §2.5 is what a session walked away from does instead.
+to resume into; §2 is what a session walked away from does instead.
 
 ### 1.1 The pure half is where the work goes
 
@@ -121,14 +121,22 @@ which is already in the view for the same reason, and it lets the takeover
 countdown use §5.2's trick: a CSS animation whose duration is
 `idleSince + IDLE_TAKEOVER_MS - now`, costing nothing per frame.
 
-### 2.2 The stamp, and the one action that does not
+### 2.2 The stamp, `present`, and the one action that does not
 
 Any valid action from a seat stamps `idleSince[actor] = now` and, if the seat
 was in `takenOver`, drops it and emits `{ kind: 'reclaim', playerId }`.
 
 **This happens in `apply`, around the dispatch, not inside each handler.** One
-place, so an action added later cannot forget, and so §2.5's `present` can be a
-handler that does literally nothing.
+place, so an action added later cannot forget.
+
+`present` is what that buys. `validate` accepts it from any seated player in any
+phase but `over` and `abandoned`, and accepts it while paused; `apply` returns
+`{ state, events: [] }`. It is the only action whose entire effect is the stamp
+every action already gets, and its handler is therefore empty. It exists because
+`../design.md` §2.6 needs a player deliberating with a thumb on the screen to be
+distinguishable from one whose phone is in a pocket, and no other action can say
+that without also trading. §5.8 is the throttle that stops the client sending it
+on every scroll.
 
 The exception is `disconnect`, which must not stamp. It is the room telling the
 rules module that a socket is gone (Phase 7); a stamp there would keep a player
