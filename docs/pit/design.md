@@ -396,7 +396,7 @@ long-press, and a screen little-kid mode (§6) can inherit without a rewrite.
 *Alternative:* drag a block onto an offer, which is more physical and reads
 better on a Chromebook. *Revisit if:* the 11-year-old does not work out that
 they pay from their own hand — `specs/session-3-the-table.md` §5.3 is the
-detail, and S10 step 9 is the reading.
+detail. They did, on the phone, with no explanation.
 
 **Which art goes where.** Live play uses `fruit/` and nothing else: the circular
 crop reads at 40px, carries no text, and nine of them fit across a 360px phone.

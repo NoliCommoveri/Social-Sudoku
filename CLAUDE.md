@@ -4,8 +4,9 @@ Project directives. Read every session.
 
 This repo is the **Carson Family Gameroom** — one site at `games.immotus.app`
 holding several games, shared player profiles, and a record of what the family
-has played. Sudoku is built and playable; a Pit-style trading game is next.
-Players are 4, 5, 11 and 12, plus two adults.
+has played. Sudoku and a Pit-style trading game are built and playable; Pit is
+against bots on one device until the room exists. Players are 4, 5, 11 and 12,
+plus two adults.
 
 Start at `ROADMAP.md` for where things stand and what phase is next.
 `docs/architecture.md` is the stack.

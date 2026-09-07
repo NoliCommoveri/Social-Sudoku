@@ -11,9 +11,10 @@ the rest live only as a row in the table below.
 | 3 | The stopped seat, and the table | [`session-3-the-table.md`](session-3-the-table.md) | Large | ✅ Built |
 | 4 | Round end, the session, the record | [`session-4-round-end-and-the-record.md`](session-4-round-end-and-the-record.md) | Large | ✅ Built |
 
-Sessions 1–4 are hub Phase 5 and leave a Pit that one person plays against bots
-on one phone. Multiplayer is Phases 6 and 7 — the `GameRoom` Durable Object,
-then Pit on it — and is not spec'd here until the room exists.
+Sessions 1–4 are hub Phase 5, they are built and checked on the phone, and they
+leave a Pit that one person plays against bots on one phone. Multiplayer is
+Phases 6 and 7 — the `GameRoom` Durable Object, then Pit on it — and is not
+spec'd here until the room exists.
 
 ## Why the game before the room
 
@@ -106,8 +107,8 @@ mode in `../design.md` §6 changes all three.
 Anything that can only be answered on a phone is an `S`* item in
 [`../../sudoku/specs/questions.md`](../../sudoku/specs/questions.md), with the
 person and the device named — not a line in a session's acceptance criteria.
-The table's is **S10**, and it carries `../design.md` §2.6's timing checks as
-well as the layout ones — sixty seconds is tuned against bots and can only be
-judged against people. Session 4's is **S12**, and it needs **S6** as well as S10: the
-record cannot be checked before the schema has been applied, and until Phase 3
-the only way to read a written row is `/admin`'s export.
+Sessions 3 and 4 had theirs — the table on the phone, and the reveal, the
+ending and the record — and both are done: the layout holds at four bots and at
+eight, §2.6's sixty seconds survived the 5-year-old, and the write path was read
+back out of `/admin`'s JSON export, which is the only way to see a written row
+until Phase 3. Phase 7's is not written until the room exists.

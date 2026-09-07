@@ -23,12 +23,13 @@ are:
 - Pit at `/pit/`, on the shelf beside sudoku: the rules core, the bots, the
   local driver, the table, the round-end reveal and the record — `public/pit/`.
   One person picks how many bots sit down and plays rounds against them on a
-  phone. A seat left alone is taken over by a bot sixty seconds later and
+  phone, and the whole of it has been played on the phone it was written for.
+  A seat left alone is taken over by a bot sixty seconds later and
   reclaimed by a tap. A corner opens the reveal — the card in full art, every
   seat's final hand and the counts it offered — and reaching the target draws
   the standings and says whether the session was written down.
-- 328 tests under `test/`, run by GitHub Actions on every push.
-- A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
+- 329 tests under `test/`, run by GitHub Actions on every push.
+- A Worker, `carson-gameroom`, serving `public/` at `games.immotus.app`, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
   and the admin page at `/admin` that applies it, seeds it, backs it up, erases
@@ -77,16 +78,15 @@ behind a placeholder front page linking to it. No features, no behaviour
 change, no bindings. The 46 tests passing on the moved tree are the proof the
 move was clean.
 
-### Phase 2 — The hub: door, profiles, database
+### Phase 2 — The hub: door, profiles, database ✅
 
 The first phase with a server in it. Delivers **H1** and **H3**.
 
-All four sessions are built. What is left is not code: setup tasks **A3** and
-**A4**, and the browser checks **S6**–**S9**, which can be answered nowhere but
-a deployment.
-
-Setup tasks in `docs/architecture.md` §8. A1 — deleting the Worker left orphaned
-by the rename — comes before the rest of them and before any binding exists.
+All four sessions are built, all four setup tasks in `docs/architecture.md` §8
+are done, and the site is up at `games.immotus.app` with the schema applied, the
+six players seeded and the gate answering. Every browser check it owed —
+the admin page, the erase and re-import path, the gate and picker, and the
+profile editor — has been run on the deployment.
 
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
 sibling, both rewritten for D1. Four sessions, because the erase/export sibling,
@@ -102,8 +102,8 @@ checksums, applied/pending/drifted — and is the only part CI can reach, becaus
 module that imports SQL and holds no logic. `001_schema.sql` carries `players`,
 `plays` and `play_results`; `seed_players.sql` carries placeholders. The admin
 page renders before login and before any table exists, and puts the failing
-statement and its error on the page. **A2** is done; the database is empty until
-**S6** applies the schema from `/admin`.
+statement and its error on the page. The deployed database has the schema
+applied and the six placeholders in it.
 
 **Session B — erase, export, re-import.** Medium, ~45k. ✅ Built.
 [`docs/hub/specs/phase-2-session-b-erase-export.md`](docs/hub/specs/phase-2-session-b-erase-export.md)
@@ -116,7 +116,8 @@ that is how the backup is unskippable with no client JavaScript and no secret.
 Erase drops one table per statement, retrying until a pass drops nothing new,
 because a batch that fails whole never makes progress against a foreign key.
 Import is tolerant of a schema that moved, which is the case that actually
-happens, and is `INSERT OR IGNORE` throughout. **S7** is the browser half.
+happens, and is `INSERT OR IGNORE` throughout. The whole path, refusals
+included, was driven on the deployment.
 
 **Session C — gate, picker, shelf.** Medium–Large, ~60k. ✅ Built.
 [`docs/hub/specs/phase-2-session-c-gate-picker-shelf.md`](docs/hub/specs/phase-2-session-c-gate-picker-shelf.md)
@@ -127,8 +128,9 @@ nothing else: the shell is a static file served before the Worker runs, so it
 renders a spinner and no data until `/api/players` answers, and `/admin` stays
 exempt because a gated `/admin` is a database that can never be brought up.
 `public/shared/` gains the tokens, the thirty avatars, the game list and the
-client's two calls; `public/hub/` is the picker and the shelf. Needs **A3** to
-be usable at all, and **A4** follows it. **S8** is the browser half.
+client's two calls; `public/hub/` is the picker and the shelf. Checked on the
+phone: the gate, the picker, the shelf and the passphrase change all do what
+§9's table says.
 
 **Session D — editing a profile.** Small–Medium, ~30k. ✅ Built.
 [`docs/hub/specs/phase-2-session-d-editing-a-profile.md`](docs/hub/specs/phase-2-session-d-editing-a-profile.md)
@@ -141,7 +143,8 @@ can put the sentence beside the control that is wrong. Creating a profile picks
 it only when the device had nobody, which is the difference between somebody
 making themselves and a parent making one for a child. The editor is the hub's
 third screen and both ways into it are on the picker — the front page stays the
-games and the faces. **S9** is the browser half.
+games and the faces. Checked on the phone, down to the 11-year-old finding the
+editor without being shown.
 
 **Why C and D split.** C was at the top of its band before any of D was in it,
 and the line between them is the one Phase 3 cares about: **Phase 3 needs
@@ -171,11 +174,11 @@ button. Three existing specs, all pure client work with no server in them.
 `docs/sudoku/specs/slice-04` (unwritten), `slice-05-solver.md`,
 `slice-06-technique-library-hints.md`. Small, Small–Medium, Medium.
 
-### Phase 5 — Pit, on one device
+### Phase 5 — Pit, on one device ✅
 
 The whole game with no server under it: rules core, bots, the local driver, the
-table, scoring and the result row. Four sessions — three Medium and one
-Large — tabled in
+table, scoring and the result row. All four sessions are built and checked on
+the phone. Four sessions — three Medium and one Large — tabled in
 [`docs/pit/specs/README.md`](docs/pit/specs/README.md); the design is
 [`docs/pit/design.md`](docs/pit/design.md).
 
@@ -185,7 +188,7 @@ so all three run in a browser tab and the family can play against bots while the
 room is still unwritten. Phase 6 is then written against a rules module that
 exists rather than against `docs/gameroom.md` alone.
 
-**Sessions 1, 2 and 3 are built.** `public/pit/core/` holds the deal, the offer
+**Sessions 1, 2 and 3.** `public/pit/core/` holds the deal, the offer
 board, the blind swap, the corner, the scoring and the confidentiality boundary;
 `core/bot.js` holds the three levels, the target invariant and the latency that
 cannot see the board; `tick` gates the bots, one per tick, because the gate is a
@@ -204,7 +207,7 @@ makes, which is what keeps `table.js` down to creating elements and reporting
 taps. Offering and accepting are the same two-tap mechanism against the hand,
 because the hand is the only place a commodity is ever named.
 
-**Session 4 is built**, and is
+**Session 4** is
 [`docs/pit/specs/session-4-round-end-and-the-record.md`](docs/pit/specs/session-4-round-end-and-the-record.md).
 The reveal, the ending and what the rules module owed them — §2, §3 and §4 — are
 the full card art, every seat's final hand and the counts it offered, the
@@ -219,7 +222,9 @@ away the round in progress, so the failure reaches the ending screen as a
 sentence instead. A row opens at the deal carrying the table as it was dealt, and
 closes when the session ends — with the human seat's result, or with none, which
 is what an abandoned game looks like. Pit's tile is on the shelf and the front
-page links to it.
+page links to it. All three shapes a session can leave were read back out of
+`/admin`'s JSON export on the phone, which is the only way to see a written row
+until Phase 3.
 
 ### Phase 6 — GameRoom
 
@@ -274,30 +279,14 @@ not exist at all until Phase 2.
 
 ## Open items
 
-`docs/sudoku/specs/questions.md` holds the browser checks. Open: **S2**, **S4**
-and **S5** — the device checks on the phone and Chromebook that no test can
-close, all about the board — and **S6**, **S7**, **S8** and **S9**, which can be
-checked nowhere but a deployment. They run in that order: S6 leaves a database
-with the schema and the six players in it, S7 erases and rebuilds it, S8 needs
-both plus setup task **A3**, without which nobody can get past the gate, and S9
-is the editor, which needs somebody to be through it.
+`docs/sudoku/specs/questions.md` holds the browser checks. Everything the hub
+and Pit owed is run; what is left is four, all sudoku's and all about the board:
+**S2**, **S4**, **S5** and **S11**.
 
 S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
 board and keypad fit above the fold, which is the same question S2 asks and the
-one the top bar moved.
-
-**S10** is Pit's table, and the table is built: it runs after S8, on a
-deployment, at `/pit/` — nothing on the shelf links there until session 4. Its
-last steps are the only reading anybody gets on whether §2.6's sixty seconds is
-the right number for a 5-year-old.
-
-**S11** is the sudoku board chooser and the win popup, and it needs neither the
-gate nor a database — it can be run on the phone the moment they are deployed.
-
-**S12** is Pit's reveal, its ending and the record, and it runs after session 4
-is deployed. It needs S6 as well as S10: nothing can be written before the
-schema is applied, and until Phase 3 reads the log the only way to see a written
-row is `/admin`'s export.
+one the top bar moved. Neither needs the gate or the database, and Phase 4 is
+the phase that would act on what they say.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

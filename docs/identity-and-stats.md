@@ -18,7 +18,8 @@ So: **a gate at the door, and no locks inside.**
 
 ## 2. The gate
 
-One shared family passphrase, stored as the Worker secret `FAMILY_PASSPHRASE`.
+One shared family passphrase, stored as the Worker secret `FAMILY_PASSPHRASE`
+and set in the dashboard rather than seeded — changing it logs every device out.
 Typed once per device on a single-field page. On success the Worker sets a
 long-lived signed cookie and never asks again on that device.
 
@@ -56,6 +57,14 @@ considered and rejected in the original sudoku due-out D1.
 `retired_at` rather than a delete, because deleting a player would either
 cascade away games the rest of the family played or leave results pointing at
 nothing.
+
+**The seed file makes players; it does not name them.**
+`worker/db/sql/seed_players.sql` ships six placeholders, and the site renames
+them — press **Run seed** once and change them from the picker, which is what
+the family does anyway and what an 11-year-old can do without asking. Editing
+the seed file is only ever how a player who *does not exist yet* is added,
+because every statement in it is `ON CONFLICT DO NOTHING`, and the avatar keys
+in it must be names the built-in set actually contains.
 
 ### 3.1 Avatars
 
@@ -161,17 +170,6 @@ No move-by-move history. No replays. The record answers *what happened*, not
 
 ## 5. Open
 
-- **D1 (carried over) — the passphrase.** It is not in the database and is not
-  seeded: it is the Worker secret `FAMILY_PASSPHRASE`, set in the dashboard —
-  setup task **A3**.
-
-  The six screen names are no longer a due out. `worker/db/sql/seed_players.sql`
-  ships placeholders, and the site renames them: press **Run seed** once and
-  then change them from the picker, which is what the family will do anyway and
-  what an 11-year-old can do without asking. Editing the seed file is only ever
-  how a player who *does not exist yet* is added, because every statement in it
-  is `ON CONFLICT DO NOTHING`, and the avatar keys in it must be names the
-  built-in set actually contains.
 - **I1 — Does the hub show cross-game standings on the front page, or does each
   game keep its own?** *Rec: front page shows the play log and a small overall
   tile; detailed stats live inside each game.* A leaderboard is the first thing

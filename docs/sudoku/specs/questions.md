@@ -18,12 +18,12 @@ This file is the current unknowns, not a log of resolved ones.
 
 ### S1 — Connect this repo to Cloudflare Workers ✅ done
 
-The repo builds and deploys on push to `main`, serving at a `.workers.dev` URL.
+The repo builds and deploys on push to `main`, serving at `games.immotus.app`.
 Build command empty, deploy command the wrangler default, both correct.
 
-The remaining Cloudflare setup — retiring the old `social-sudoko` Worker, the
-D1 database, the two secrets, and the custom domain `games.immotus.app` — is hub
-work and lives in `../../architecture.md` §8, not here.
+The rest of the Cloudflare setup — the Worker, the D1 database, the two secrets
+and the domain — is hub work and lives in `../../architecture.md` §8, not here.
+All of it is done.
 
 ### S2 — Verify slice 1 on the phone and the Chromebook
 
@@ -34,7 +34,7 @@ the point of trying to call slice 1 done.
 
 Order matters — each step needs the one above it.
 
-1. **S1 is done** and the `.workers.dev` URL loads. *(criterion
+1. **S1 is done** and `games.immotus.app` loads. *(criterion
    2)*
 2. **On the Android phone, open `/dev.html` and press "time 100 deals".** Report
    the p95 it prints. Under 250ms passes; over 1s is a hard fail and sends
@@ -92,233 +92,6 @@ old.
 Answer 2 with a rough time and whether anyone got stuck, not a yes or no. It is
 the only measurement in this project that a test cannot take.
 
-### S6 — Check the database and the admin page on the deployment
-
-Phase 2 Session A's behaviour lives entirely in a Worker talking to D1, and
-there is no `wrangler dev` here — the loop is push, wait for the build, open the
-page. None of this can be closed by CI or by me. **A2** is done — the `gameroom`
-database exists and its id is in `wrangler.jsonc` — so everything below is
-reachable as soon as this is on `main` and Cloudflare has built it.
-
-Any browser, either device. In this order — each step is the setup for the next.
-
-1. **Open `/admin` on the fresh database.** Everything pending, no error, and a
-   line saying the database has no tables yet. Nothing red.
-2. **Press Apply pending.** The migration goes to *applied* with a timestamp.
-   Press it again: "Nothing pending."
-3. **Press Run seed.** Six players go in. Press it again: it says it ran, and
-   nothing changes — that is the ON CONFLICT rule doing its job, and it is what
-   makes editing `seed_players.sql` a safe way to fix a name.
-4. **Edit `seed_players.sql`** — change a screen name — commit, wait for the
-   build, press Run seed. The name does *not* change, because the row exists.
-   That is correct and is the thing to know before Session C: renaming a player
-   is the picker's job, not the seed file's.
-5. **Edit `001_schema.sql`** — a comment is enough — commit, wait, reload
-   `/admin`. It must show **drifted** in red with both checksums, and Apply
-   pending must not reapply it. Put the comment back afterwards.
-6. **Break `001_schema.sql` on purpose** — delete a closing bracket — commit,
-   wait, and on a *fresh* database press Apply pending. The page must print the
-   failing statement and SQLite's message, and the migration must still read as
-   pending. Undo it afterwards.
-7. **Open `/` and `/sudoku/`.** Unchanged: same board, same behaviour, no sign
-   anywhere that a database exists.
-
-Step 6 is the one worth the trouble. It is what pays for the machinery that
-names the failing statement, and there is nowhere else to see an error from a
-migration.
-
-Steps 5 and 6 both need a way back to a clean database. **Erase everything** is
-it, and it is built — take the backup it asks for first, then Erase → Apply
-pending → Run seed. Doing these checks now rather than after Phase 3 is still
-the cheap moment: the only rows in the database are six seeded placeholders.
-
-### S7 — Check erase, export and re-import on the deployment
-
-Phase 2 Session B's acceptance criteria 2–8
-(`../../hub/specs/phase-2-session-b-erase-export.md` §9). Same loop as **S6** —
-push, wait for the build, open the page — and reachable as soon as this is on
-`main` and Cloudflare has built it. Do **S6** first: this needs a database with
-the schema applied and the six players seeded, which is what S6 leaves behind.
-
-Every route was driven end to end against a real SQLite before it shipped —
-apply, seed, export, all three erase refusals, erase with live foreign keys, the
-round trip back, a second import, an import into a moved schema, and two broken
-files. What that could not check is D1 itself: whether it answers
-`PRAGMA table_info`, whether a downloaded response sets a cookie on the phone,
-and whether the file input works there. Those are why this list exists.
-
-1. **Open `/admin`.** Backup, Restore and a red Danger panel are below the
-   existing table. Nothing is red that should not be.
-2. **Press Erase everything, then confirm without downloading.** It must refuse
-   and say the backup has to be downloaded first. This is the step the whole
-   mechanism exists for — if it erases anyway, stop and report it.
-3. **Download the backup.** Open the file. Six players in it, and no
-   `_migrations` table among the tables.
-4. **Confirm the erase.** Every table goes, including the ledger, and `/admin`
-   then reads every migration as pending — a fresh database.
-5. **Apply pending, Run seed, then import the file from step 3.** It should
-   report the rows it put in. Import it a second time: it says it ran and
-   nothing changes.
-6. **Take a backup, edit `001_schema.sql`** — add a column to `players` —
-   commit, wait, then Erase → Apply pending → import the old backup. It must
-   warn that the schema moved, import what still fits, and name what it dropped.
-   This is the case that actually happens; step 2 is the one that must never
-   fail.
-7. **Import a deliberately broken file** — delete a bracket in a copy — and
-   check it is refused with a sentence naming the problem rather than a wall of
-   SQLite errors.
-8. **Open `/` and `/sudoku/`.** Unchanged, as in S6 step 7.
-
-Step 6 leaves the schema changed. Put `001_schema.sql` back afterwards, erase,
-apply and seed again — which is now a browser action rather than a trip to the
-Cloudflare dashboard, and is the point of the session.
-
-### S8 — Check the gate, the picker and the shelf on the phone
-
-Phase 2 Session C's acceptance criteria 2–10
-(`../../hub/specs/phase-2-session-c-gate-picker-shelf.md` §9). This is the
-first phase whose subject is a screen rather than a database, so most of it can
-only be answered by watching somebody use it.
-
-**Blocked on setup task A3** — `FAMILY_PASSPHRASE` and `SESSION_SECRET` in the
-Cloudflare dashboard. Until they are set, `/gate` says so and nobody gets in.
-Do **S6** and **S7** first: this needs the schema applied and the six players
-seeded.
-
-Do it on the Android phone, in portrait, on a device that has never opened the
-site. Steps 1–7 are yours; steps 8 and 9 are the ones that actually decide
-whether H5 holds, and they are somebody else's.
-
-1. **Open `/`.** It should show a moment of "Opening the gameroom…" and then the
-   gate. Type the word wrong once: it says so and does not let you in. Type it
-   right: you land on the picker. *(criteria 2, 3)*
-2. **Tap your own face.** The shelf, with your face in the bar and the ring on
-   your tile in the strip below. Everybody's face is visible without scrolling.
-   *(criterion 4)*
-3. **Close the tab and open `/` again.** Straight to the shelf, still you, no
-   gate. *(criterion 5)*
-4. **Tap the bar, then tap somebody else.** You are them. Tap the bar again and
-   choose **Nobody**: the picker comes back and stays until somebody is chosen.
-   *(criterion 6)*
-5. **Tap the Sudoku tile, play a couple of cells, then use the back link.** The
-   shelf, as you left it. *(criterion 7)*
-6. **Look for anything smaller than a thumb, and for horizontal scroll.**
-   Nothing on the hub should be under 64px or need a sideways drag. Do this on
-   the Chromebook too — it should be the same layout with more air, not a
-   different one. *(criterion 8)*
-7. **Open `/admin`** on a device that never answered the gate: it works, which
-   is deliberate. Then change `FAMILY_PASSPHRASE` in the dashboard and reload
-   `/`: every device asks again. Put it back. *(criteria 9, 10)*
-8. **Can the 5-year-old get from the front page into a game, alone, first
-   try?** Watch, do not coach. Where they hesitate is the finding, and "they
-   tapped the wrong face" is the most useful answer this list can produce.
-9. **Does the 12-year-old open it a second time without being asked?** Takes a
-   week to read and is the only honest measure of H5.
-
-Steps 8 and 9 are `design-language.md` §5's two questions, and they are the
-reason the rest of this exists. A "no" on either is not a bug report — it is the
-shelf reopening.
-
-### S9 — Check making and changing a profile, on the phone
-
-Phase 2 Session D's acceptance criteria 2–8
-(`../../hub/specs/phase-2-session-d-editing-a-profile.md` §7). Do **S8** first:
-this needs somebody through the gate and a picker with faces on it.
-
-On the Android phone, in portrait.
-
-1. **Tap the bar, then `New player`.** Type a name, tap a face, press
-   **Make me**. You are that person, on the shelf, and the new face is at the
-   end of the family strip. *(criteria 2, 3)*
-2. **Tap the bar, then `Change my name or face`.** Change the name, save, and
-   look at the bar and the strip: both say the new one straight away.
-   *(criterion 4)*
-3. **Try to take a face somebody else has.** It cannot be tapped and it carries
-   their name. Then type a name somebody else has and press save: a sentence
-   says so, and the screen scrolls to it rather than leaving it above the fold.
-   *(criterion 5)*
-4. **Reload `/`.** Still you, no gate, no picker — a rename is not a new
-   player. *(criterion 6)*
-5. **On a second device that is somebody else**, make a profile for one of the
-   little ones. That device should still be *you* afterwards, and the new
-   profile should be on the first device's picker after a reload.
-   *(criterion 3)*
-6. **Look for anything smaller than a thumb, and for horizontal scroll**, on the
-   editor with all thirty faces on it. Nothing under 64px, no type under 16px,
-   no sideways drag, and the save button stays reachable without scrolling to
-   the bottom. Do it on the Chromebook too. *(criterion 7)*
-7. **Hand the phone to the 11-year-old and say nothing except "change your
-   name".** Whether they find it, and how long it takes, is the finding.
-   *(criterion 8)*
-
-Step 7 is the one this exists for. If they cannot find it, the two ways into the
-editor are in the wrong place, and that is a design change rather than a bug.
-
-### S10 — Check the Pit table on the phone
-
-Pit session 3's acceptance criteria that no test reaches
-(`../../pit/specs/session-3-the-table.md` §11). Do it after session 3 is built
-and deployed. Needs **S8** — the table asks who you are and sends you to the
-gate if it does not know.
-
-The subject is a live screen with a clock under it, so most of this is watching
-rather than checking. On the Android phone, in portrait.
-
-1. **Open `/pit/`.** Tap a bot count, then **Deal**. Look at the tile row first:
-   does it read as "this many players *and* this many fruit", or only as a
-   number?
-2. **Play one full round.** Post an offer, take somebody's offer, and watch what
-   your hand does. The finding is whether you can tell what you just received
-   without being told — §5.4's line is one beat long, and one beat may be too
-   short.
-3. **Look for movement under your thumb.** Nothing should resize or reorder as
-   counts change, and no row should be replaced while you are pressing it. A tap
-   that does nothing is the symptom.
-4. **Let an offer you are paying for expire.** The hand should un-grey, the line
-   should say *Gone*, and nothing should look like an error, because losing a
-   race is normal play.
-5. **Corner one.** Whether the Harvest bar lights *and gets noticed* is the
-   question — it is at the bottom of a screen with a lot happening above it.
-   Then play a session with auto-harvest on and say which one the 11-year-old
-   prefers. That answers `../../pit/design.md` §2.4's toggle.
-6. **Measure the tap targets.** Nothing under 64px, no type under 16px, no
-   horizontal scroll, at four bots and again at eight. Eight is the two-row hand
-   and the scrolling board, and it is the case the layout only survives rather
-   than fits.
-7. **Turn on reduced motion** (Android: Settings → Accessibility) and play a
-   round. The countdown must still be readable; if it vanished, the numeral
-   fallback is wrong.
-8. **On the Chromebook, play a round with the keyboard only** — tab, enter,
-   nothing else. Every control is a real button, so this should work; if it
-   does not, something is a `div`.
-9. **Hand it to the 11-year-old with no explanation and watch them trade.**
-   Where they hesitate is the finding, and "they did not know you had to tap
-   your own cards to pay" is the most useful answer this list can produce.
-10. **Ask the 12-year-old whether the bots feel like people.** Session 2's
-    latency and noise are tuned blind; this is the only reading either gets.
-11. **Pause it, put the phone down for two minutes, and resume.** Play on for a
-    round. Nothing should expire, jump or fire in a burst on the first second
-    back — `../../pit/specs/session-3-the-table.md` §2.5 is the arithmetic, and
-    this is the only place the arithmetic is checked against a real clock rather
-    than a fake one. Then check that the sheet holding Pause is findable at all
-    when you actually want it, which is the open question in §5.7.
-12. **Stop touching it in the middle of a round and watch your own seat go.**
-    The countdown should appear at thirty seconds, the takeover should be
-    obvious, and one tap should get the seat back. Sixty seconds of watching
-    this is the point; do not skip to the end.
-13. **Hand it to the 5-year-old and let them stall.** Sixty seconds is tuned on
-    bot rounds (`../../pit/design.md` §2.6) and this is the case it is most
-    likely wrong for. If their seat is taken over while they are still looking
-    at it, `IDLE_TAKEOVER_MS` is too short and Phase 9 owns the number.
-
-Steps 9 and 10 are what this exists for. A "no" on 9 is §5.3's two-tap
-mechanism reopening, not a bug. Steps 12 and 13 are the pair that decides
-whether sixty seconds survives contact with the people it was written for.
-
-Pit's word for the button — **Harvest!** — is worth asking the little ones about
-while the phone is in their hands (`../../pit/design.md` §2.4). If they call it
-something else every time, that is the name.
-
 ### S11 — Check the board chooser and the win popup on the phone
 
 Two sudoku changes whose whole point is how they feel in a hand, so no test
@@ -349,56 +122,6 @@ reaches either. On the Android phone, in portrait, and again on the Chromebook.
 7. **On the Chromebook, finish one with the keyboard only.** Focus should land
    in the dialog, Escape should close it, and focus should come back to the
    board.
-
-### S12 — Check the reveal, the ending and the record on the phone
-
-Pit session 4's acceptance criteria that no test reaches
-(`../../pit/specs/session-4-round-end-and-the-record.md` §9). Needs **S10**, and
-needs **S6** as well: nothing can be written until the schema has been applied,
-and until Phase 3 the only way to read a written row is `/admin`'s export.
-
-On the Android phone, in portrait, with four bots and then with eight.
-
-1. **Play a round to a corner and stop at the panel.** Can you tell who won,
-   with what, and for how much, without reading twice? The card, the sentence
-   and the seat blocks are three things saying overlapping parts of one fact,
-   and if one of them is doing nothing it should go.
-2. **Read the counts line against the hands.** *offered 3 · 3 · 2* over a hand
-   of eight kiwis is the thing the panel exists for. If nobody looks at it, say
-   so — it is six words and it comes out.
-3. **Press Next round from the first frame.** It must work while the card is
-   still growing. If it does not, the celebration is blocking and that is a bug
-   rather than a taste question.
-4. **Let the backstop end a round instead.** Thirty seconds of the panel is a
-   long time; the question is whether it feels like a pause or like a hang.
-5. **Play a session out to the target.** Standings, ranks and corners, and the
-   sentence about saving. Watch for the sentence changing from *Saving…* — if it
-   never resolves, the record failed silently, which is the one failure this
-   screen exists to make visible.
-6. **Abandon one deliberately**, then open `/admin`, export the JSON, and look.
-   The finished session is a play with one result row; the abandoned one is a
-   play with an `ended_at` and no result; a game you closed the tab on is a play
-   with no `ended_at`. All three are true things and all three should be there.
-7. **Check the name on the result.** `player_id` is whoever the device is on,
-   not whoever pressed Deal, and this is the only place that gets checked
-   against a real cookie.
-8. **Turn on reduced motion** and finish a round. The card stays, the growth
-   goes. If the panel stops reading as a moment, the card is doing all the work
-   and the sentence is doing none.
-9. **On the Chromebook, finish a round with the keyboard only.** Focus should
-   land on **Next round**; at the end it should land on **Play again**.
-10. **Look at the shelf.** Pit's tile against sudoku's, from across the room.
-    Does the card back read as *this* game, or only as *a card game*?
-    `../../pit/specs/session-4-round-end-and-the-record.md` §6 is the
-    alternative if it does not.
-11. **Ask the 12-year-old what they want to see about a finished game.** Nothing
-    reads the record until Phase 3, so this is the cheapest moment to find out
-    that what gets written is the wrong thing — a schema is easier to change
-    before there are rows in it worth keeping.
-
-Step 6 is the one that cannot be skipped. Everything else on this list is a
-screen somebody can look at again tomorrow; the export is the only evidence that
-the write path does what §5 says.
 
 ### S3 — Nothing else, for sudoku
 

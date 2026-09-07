@@ -281,32 +281,21 @@ out on purpose rather than after someone's brother posts a 4-second 9×9.
 
 ## 8. Setup tasks
 
-Dashboard actions, in order. None has a CLI step.
+Dashboard actions. None has a CLI step. All four are done; they stay here
+because the next Worker, binding or domain is set up the same way.
 
-- **A1 — Retire the old `social-sudoko` Worker.** *First, before A2.*
-  `wrangler.jsonc` names the Worker `carson-gameroom`, matching the repo, but
-  **changing `name` does not rename anything on Cloudflare.** The deploy that
-  carried the change created a *second* Worker under the new name and left the
-  old one running.
-
-  Confirm `carson-gameroom` serves the site, confirm its build connection points
-  at this repo, then delete `social-sudoko`.
-
-  The order matters and the window is now: the orphan is an empty static-file
-  server with no bindings, no secrets and no domain, so deleting it costs
-  nothing. After A2–A4 it would hold the D1 binding, the Durable Object
-  namespace and the domain, none of which follow to the new Worker.
-
+- **A1 — Retire the old `social-sudoko` Worker ✅ done.** `carson-gameroom` is
+  the only Worker, it serves the site, and its build connection points at this
+  repo. Worth knowing if a Worker is ever renamed again: **changing `name` in
+  `wrangler.jsonc` does not rename anything on Cloudflare** — the next deploy
+  creates a second Worker and leaves the first one running, holding whatever
+  bindings, secrets and domains it had.
 - **A2 — Create the D1 database ✅ done.** `gameroom`, its id in
-  `wrangler.jsonc`. The database exists and is empty; **S6** is applying the
-  schema to it from `/admin`, which happens after this branch is on `main`.
-- **A3 — Set two secrets.** Worker → Settings → Variables and Secrets →
+  `wrangler.jsonc`. The schema is applied and the six placeholders are seeded.
+- **A3 — Set two secrets ✅ done.** Worker → Settings → Variables and Secrets →
   Encrypted. `FAMILY_PASSPHRASE` and `SESSION_SECRET` (any long random string).
-  Both are needed before anybody can get past the gate — until they are set,
-  `/gate` says so and `/admin` carries on working. `FAMILY_PASSPHRASE` is the
-  word the 5-year-old types, so it is one word everybody can spell; case and
-  stray spaces are ignored. Changing either later logs every device out, which
-  is the whole of that story. *Phase 2, and **S8** is blocked on it.*
-- **A4 — Add the custom domain.** Worker → Settings → Domains & Routes → Add
-  custom domain → `games.immotus.app`. The zone is already on Cloudflare, so the
-  DNS record and certificate are automatic. *Phase 2.*
+  `FAMILY_PASSPHRASE` is the word the 5-year-old types, so it is one word
+  everybody can spell; case and stray spaces are ignored. Changing either logs
+  every device out, which is the whole of that story.
+- **A4 — Add the custom domain ✅ done.** `games.immotus.app` serves the Worker.
+  The zone is on Cloudflare, so the DNS record and certificate were automatic.

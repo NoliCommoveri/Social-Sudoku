@@ -781,11 +781,11 @@ letting it reach `init`.
     `prefers-reduced-motion`; both countdowns degrade to a numeral rather than
     disappearing.
 
-Everything about how this feels on a phone is **S10** in
-`../../sudoku/specs/questions.md`, with the device and the person named. A
-layout criterion that CI cannot reach is not written here as though it could be.
-Whether sixty seconds is the right number for a 5-year-old is one of them; it is
-not a test.
+Everything about how this feels on a phone was checked on the phone rather than
+written here as though CI could reach it — the layout at four bots and at eight,
+the reduced-motion countdowns, a keyboard-only round on the Chromebook, and the
+two that mattered: the 11-year-old worked out the two-tap mechanism, and sixty
+seconds survived the 5-year-old. `../design.md` §2.6's number stands.
 
 ## 12. Explicitly not in this session
 

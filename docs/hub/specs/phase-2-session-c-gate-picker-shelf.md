@@ -222,31 +222,32 @@ which is H2 as code.
   not is a player with no face, discovered long after the seed was edited.
 
 `worker/index.js` is still unreachable from CI — it imports `admin.js`, which
-imports SQL — so the routing *between* the pieces is checked by S8 rather than
-here.
+imports SQL — so the routing *between* the pieces is checked on the deployment
+rather than here.
 
 The layouts were rendered in headless Chromium at a true 360px viewport, in
 both themes, before this shipped. That is a screenshot rather than a test, and
-it is not a substitute for **S8**: it says the CSS does what it says, not that a
-5-year-old can find the fox.
+it is not a substitute for the phone: it says the CSS does what it says, not
+that a 5-year-old can find the fox.
 
 ## 9. Acceptance criteria
 
 | # | Criterion | Closed by |
 |---|---|---|
 | 1 | `node --test` passes, including the three new files. | CI |
-| 2 | With **A3** done, `/` on a fresh device sends you to `/gate`; the right word lets you in and never asks again on that device. | **S8** |
-| 3 | The wrong word is refused with a sentence, and `/api/players` without a gate cookie is a JSON 401. | **S8** |
-| 4 | Through the gate, the picker shows the six seeded players with their faces; tapping one lands on the shelf with that face in the bar. | **S8** |
-| 5 | Closing the tab and reopening `/` goes straight to the shelf, still as the same player. | **S8** |
-| 6 | Tapping the bar shows the picker again; **Nobody** clears the device back to the picker. | **S8** |
-| 7 | The shelf's Sudoku tile opens `/sudoku/`, and the sudoku's back link returns to the shelf. | **S8** |
-| 8 | Everything is legible and tappable on the 360px phone in portrait — nothing under 64px on the hub, no horizontal scroll. | **S8** |
-| 9 | Changing `FAMILY_PASSPHRASE` in the dashboard makes every device ask again. | **S8** |
-| 10 | `/admin` still works with no passphrase set, and `/sudoku/` still plays. | **S8** |
+| 2 | `/` on a fresh device sends you to `/gate`; the right word lets you in and never asks again on that device. | Phone ✅ |
+| 3 | The wrong word is refused with a sentence, and `/api/players` without a gate cookie is a JSON 401. | Phone ✅ |
+| 4 | Through the gate, the picker shows the six seeded players with their faces; tapping one lands on the shelf with that face in the bar. | Phone ✅ |
+| 5 | Closing the tab and reopening `/` goes straight to the shelf, still as the same player. | Phone ✅ |
+| 6 | Tapping the bar shows the picker again; **Nobody** clears the device back to the picker. | Phone ✅ |
+| 7 | The shelf's Sudoku tile opens `/sudoku/`, and the sudoku's back link returns to the shelf. | Phone ✅ |
+| 8 | Everything is legible and tappable on the 360px phone in portrait — nothing under 64px on the hub, no horizontal scroll. | Phone ✅ |
+| 9 | Changing `FAMILY_PASSPHRASE` in the dashboard makes every device ask again. | Phone ✅ |
+| 10 | `/admin` still works with no passphrase set, and `/sudoku/` still plays. | Phone ✅ |
 
-Criterion 8 is the one that decides whether any of the rest matters, and it is
-the one nothing here can close.
+Criteria 2–10 are closed on the deployed site and the phone. Criterion 8 is the
+one that decides whether any of the rest matters, and it is the one nothing here
+could close.
 
 ## 10. Explicitly not in this session
 
