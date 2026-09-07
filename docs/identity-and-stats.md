@@ -168,14 +168,30 @@ Schema in [`architecture.md`](architecture.md) §3.1. What it is *for*:
 No move-by-move history. No replays. The record answers *what happened*, not
 *how*. Adding replays later means a new table, not a change to this one.
 
+### 4.3 Where the record is shown
+
+**The hub's front page shows the play log and one small overall tile. Detailed
+stats live inside each game.**
+
+A leaderboard is the first thing a 12-year-old optimises and the first thing a
+5-year-old loses at. Making the log the hero and the ranking secondary is a
+deliberate choice about what this site is for: the front page answers *what did
+we play*, and it never puts the six of you in order. The tile carries the
+family's total, a streak, and — when the device has somebody picked — that one
+player's own counts. Nobody else's.
+
+*Alternative:* cross-game standings on the front page. *Would revisit if:* the
+kids ask for it, which would be them telling us what the site is for, and it is
+a screen rather than a schema change either way.
+
+Per-game detail — sudoku's best times by size and tier, Pit's points and
+corners — is a screen inside that game, because what `config_json` and
+`detail_json` mean is per-game knowledge. The Worker holds none of it and hands
+both back unread (`hub/specs/phase-3-session-a-the-read-api-and-the-log.md` §3.1),
+which is what keeps a third game to one file (H2).
+
 ## 5. Open
 
-- **I1 — Does the hub show cross-game standings on the front page, or does each
-  game keep its own?** *Rec: front page shows the play log and a small overall
-  tile; detailed stats live inside each game.* A leaderboard is the first thing
-  a 12-year-old optimises and the first thing a 5-year-old loses at. Making the
-  log the hero and the ranking secondary is a deliberate choice about what the
-  site is for, and it is cheap to reverse.
 - **I2 — Do the 4- and 5-year-olds get their own profiles from day one?** *Rec:
   yes.* They will play Pit's little-kid mode in Phase 9 and sudoku 4×4 before
   that, and a profile they own is most of why they will want to.

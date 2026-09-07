@@ -123,6 +123,58 @@ reaches either. On the Android phone, in portrait, and again on the Chromebook.
    in the dialog, Escape should close it, and focus should come back to the
    board.
 
+### S12 — Check the play log and the tile on the front page
+
+Phase 3 Session A puts the record on the shelf, and none of what matters about
+it is reachable by a test: whether the log reads as the family's memory, and
+whether a pre-reader can read a row. On the Android phone, in portrait, with at
+least one Pit session and one abandoned game already written.
+
+1. **Open the front page and look without scrolling.** The games have to still
+   be the first thing there, with the log starting below them. If the tiles have
+   been pushed off the top, the log is too tall before it is too interesting.
+2. **Ask the 5-year-old what the top row says.** Do not name the games. They
+   should get *Pit* or *sudoku* from the art and whose face is on it. Where they
+   hesitate is the finding, and it is probably the art at 32px.
+3. **Find the abandoned row.** It should read as unfinished at a glance and not
+   as an error, and nobody should ask what went wrong with it.
+4. **Press `More`.** It should add a page below without moving what you were
+   looking at. If it jumps, the log is redrawing whole instead of appending.
+5. **Read the tile aloud.** *417 games, 6 days in a row, you: 96 games.* The
+   question is whether the 12-year-old reads it as a score to beat. It should
+   read as the house's, not theirs.
+6. **Watch for a week: does anybody mention the streak?** If the streak becomes
+   a thing to protect rather than a thing to notice, it is doing the job a
+   leaderboard was kept off this page to avoid, and it comes off the tile.
+7. **Turn the wifi off and reload.** The games and the faces have to be there,
+   with one sentence where the log would be. A front page that fails whole
+   because a stats query did is the failure this is checked for.
+
+### S13 — Check sudoku's timer on the phone
+
+Phase 3 Session B puts a clock in the sudoku bar, which is the first change to
+that screen since S11 and can undo S11 step 1 on its own.
+
+1. **Open `/sudoku/` and look without scrolling.** The whole grid and every
+   keypad key still have to be on the screen at once, with the readout in the
+   bar. If anything has gone below the fold, `index.html`'s `--reserve` is the
+   number that is wrong.
+2. **Play for a minute and watch the readout.** It should not jitter or shift
+   the board name as the digits change.
+3. **Lock the phone for two minutes, then come back.** The clock must have not
+   moved while the screen was off.
+4. **Leave a board half done, come back tomorrow, finish it.** The time written
+   down has to be the minutes actually spent, not the hours since.
+5. **Finish one and check the front page.** The row should be there with the
+   time, on today.
+6. **Start a new board over an unfinished one, then look at the log.** The
+   abandoned board should be in it, unfinished.
+7. **Tap Nobody in the picker, then finish a 4×4.** The confetti and the popup
+   should be exactly as they were, with a small line saying it was not saved.
+8. **Watch the 5-year-old play one with the clock there.** If they start hurrying
+   or ask about the numbers, the timer should be showing only after the first
+   solve, or not at all on 4×4. That is the finding this check exists for.
+
 ### S3 — Nothing else, for sudoku
 
 Sudoku itself needs no secret, no environment variable and no binding. The
@@ -176,8 +228,10 @@ is exactly the failure §7.2 is worried about. On-completion-only is punishing
 for a beginner who went wrong forty moves back. The check button puts the cost
 of guessing on the player's own decision to press it.
 
-Slice 9 should count check presses as an assist and keep them out of best times,
-but that is slice 9's problem and I will spec it there.
+Check presses are counted as an assist and written into the result's `detail`
+(`../../hub/specs/phase-3-session-b-sudoku-timer-and-its-row.md` §5). What the
+bests screen then does with them — footnote or exclusion — is Phase 3
+Session C's, and it is a display decision now that the number is recorded.
 
 ### Q4 — Pencil marks in slice 1?
 
