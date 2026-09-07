@@ -151,21 +151,21 @@ typing a name and choosing a face would be mutually exclusive.
 The three screens were rendered in headless Chromium at a true 360px viewport
 in both themes, and the editor was driven through it — create, refuse, rename,
 back out — against a server running the same `profile.js`. That is a screenshot
-and a script rather than a test, and it is not a substitute for **S9**: it says
-the round trip works, not that the 11-year-old finds it.
+and a script rather than a test, and it was not a substitute for the phone: it
+says the round trip works, not that the 11-year-old finds it. They did.
 
 ## 7. Acceptance criteria
 
 | # | Criterion | Closed by |
 |---|---|---|
 | 1 | `node --test` passes, including the two new files. | CI |
-| 2 | From the picker, `New player` makes a profile with a name and a face, and it appears in the strip in creation order. | **S9** |
-| 3 | Making one on a device with nobody on it lands on the shelf as that new player; making one while somebody is picked leaves the device as them. | **S9** |
-| 4 | `Change my name or face` renames the picked player, and the new name is in the bar and the strip immediately. | **S9** |
-| 5 | A face another player holds cannot be tapped and says whose it is; a name somebody has is refused in a sentence. | **S9** |
-| 6 | A renamed player is still the same player: the `who` cookie is unchanged and nothing has to be picked again. | **S9** |
-| 7 | Everything is legible and tappable on the 360px phone — nothing under 64px, no horizontal scroll, no type under 16px. | **S9** |
-| 8 | The 11-year-old renames themselves without being shown how. | **S9** |
+| 2 | From the picker, `New player` makes a profile with a name and a face, and it appears in the strip in creation order. | Phone ✅ |
+| 3 | Making one on a device with nobody on it lands on the shelf as that new player; making one while somebody is picked leaves the device as them. | Phone ✅ |
+| 4 | `Change my name or face` renames the picked player, and the new name is in the bar and the strip immediately. | Phone ✅ |
+| 5 | A face another player holds cannot be tapped and says whose it is; a name somebody has is refused in a sentence. | Phone ✅ |
+| 6 | A renamed player is still the same player: the `who` cookie is unchanged and nothing has to be picked again. | Phone ✅ |
+| 7 | Everything is legible and tappable on the 360px phone — nothing under 64px, no horizontal scroll, no type under 16px. | Phone ✅ |
+| 8 | The 11-year-old renames themselves without being shown how. | Phone ✅ |
 
 Criterion 8 is the one that decides whether the rest mattered.
 

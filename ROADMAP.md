@@ -84,9 +84,9 @@ The first phase with a server in it. Delivers **H1** and **H3**.
 
 All four sessions are built, all four setup tasks in `docs/architecture.md` §8
 are done, and the site is up at `games.immotus.app` with the schema applied, the
-six players seeded and the gate answering. What is left is two browser checks
-that can be answered nowhere but a deployment: **S7**, the erase and re-import
-path, and **S9**, the profile editor. Neither blocks another phase.
+six players seeded and the gate answering. Every browser check it owed —
+the admin page, the erase and re-import path, the gate and picker, and the
+profile editor — has been run on the deployment.
 
 This absorbs the old `slice-07-storage-foundation.md` and its erase/export
 sibling, both rewritten for D1. Four sessions, because the erase/export sibling,
@@ -116,7 +116,8 @@ that is how the backup is unskippable with no client JavaScript and no secret.
 Erase drops one table per statement, retrying until a pass drops nothing new,
 because a batch that fails whole never makes progress against a foreign key.
 Import is tolerant of a schema that moved, which is the case that actually
-happens, and is `INSERT OR IGNORE` throughout. **S7** is the browser half.
+happens, and is `INSERT OR IGNORE` throughout. The whole path, refusals
+included, was driven on the deployment.
 
 **Session C — gate, picker, shelf.** Medium–Large, ~60k. ✅ Built.
 [`docs/hub/specs/phase-2-session-c-gate-picker-shelf.md`](docs/hub/specs/phase-2-session-c-gate-picker-shelf.md)
@@ -142,7 +143,8 @@ can put the sentence beside the control that is wrong. Creating a profile picks
 it only when the device had nobody, which is the difference between somebody
 making themselves and a parent making one for a child. The editor is the hub's
 third screen and both ways into it are on the picker — the front page stays the
-games and the faces. **S9** is the browser half.
+games and the faces. Checked on the phone, down to the 11-year-old finding the
+editor without being shown.
 
 **Why C and D split.** C was at the top of its band before any of D was in it,
 and the line between them is the one Phase 3 cares about: **Phase 3 needs
@@ -277,20 +279,14 @@ not exist at all until Phase 2.
 
 ## Open items
 
-`docs/sudoku/specs/questions.md` holds the browser checks. The setup tasks are
-done and the site is up, so nothing in that file is blocked on anything but
-somebody's time and a phone.
-
-Open: **S2**, **S4** and **S5** — the device checks on the phone and Chromebook
-that no test can close, all about the board — plus **S7**, the hub's erase,
-export and re-import, and **S9**, the profile editor.
+`docs/sudoku/specs/questions.md` holds the browser checks. Everything the hub
+and Pit owed is run; what is left is four, all sudoku's and all about the board:
+**S2**, **S4**, **S5** and **S11**.
 
 S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
 board and keypad fit above the fold, which is the same question S2 asks and the
-one the top bar moved.
-
-**S11** is the sudoku board chooser and the win popup, and it needs neither the
-gate nor a database — it can be run on the phone now.
+one the top bar moved. Neither needs the gate or the database, and Phase 4 is
+the phase that would act on what they say.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

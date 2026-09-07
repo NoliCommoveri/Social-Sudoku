@@ -13,8 +13,9 @@ rather than the scope.
 
 **Blocks:** Phase 3, the first phase that writes a row anyone would miss. It is
 also the only way back to a clean database without deleting the D1 database in
-the dashboard, which is what makes a schema change a browser action. **S7** is
-the check.
+the dashboard, which is what makes a schema change a browser action. That was
+driven end to end on the deployment, including the erase that refuses without a
+backup.
 
 ---
 
@@ -293,13 +294,13 @@ The D1 halves in `apply.js` — the table read, the drop loop, the batch executi
 | # | Criterion | Closed by |
 |---|---|---|
 | 1 | `node --test` passes; test groups 1–7 exist and the `WITHOUT ROWID` assertion is in `sql-files.test.js`. | CI |
-| 2 | `/admin` renders on a fresh database with the backup, restore and danger sections present and no error. | **S7** |
-| 3 | **Download the backup** on a seeded database yields a JSON file with six players in it. | **S7** |
-| 4 | **Erase everything** without downloading refuses and says why; after downloading, it drops every table including `_migrations`. | **S7** |
-| 5 | After erase, `/admin` shows every migration pending; **Apply pending** then **Run seed** rebuilds the database. | **S7** |
-| 6 | Importing the file from criterion 3 into the rebuilt database restores it; importing it a second time changes nothing and does not error. | **S7** |
-| 7 | Importing a backup taken against an older `001_schema.sql` warns, imports the columns that still exist, and names the ones it dropped. | **S7** |
-| 8 | A deliberately corrupted backup file is refused with a sentence naming what is wrong, and the database is untouched. | **S7** |
+| 2 | `/admin` renders on a fresh database with the backup, restore and danger sections present and no error. | Browser ✅ |
+| 3 | **Download the backup** on a seeded database yields a JSON file with six players in it. | Browser ✅ |
+| 4 | **Erase everything** without downloading refuses and says why; after downloading, it drops every table including `_migrations`. | Browser ✅ |
+| 5 | After erase, `/admin` shows every migration pending; **Apply pending** then **Run seed** rebuilds the database. | Browser ✅ |
+| 6 | Importing the file from criterion 3 into the rebuilt database restores it; importing it a second time changes nothing and does not error. | Browser ✅ |
+| 7 | Importing a backup taken against an older `001_schema.sql` warns, imports the columns that still exist, and names the ones it dropped. | Browser ✅ |
+| 8 | A deliberately corrupted backup file is refused with a sentence naming what is wrong, and the database is untouched. | Browser ✅ |
 | 9 | `/` and `/sudoku/` are unchanged. | local |
 
 Criteria 4 and 7 are the two worth the trouble. 4 is the whole reason the cookie
