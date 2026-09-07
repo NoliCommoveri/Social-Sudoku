@@ -159,7 +159,7 @@ and for the same reason: who is at the table is what you look at while the
 screen is not yours to touch.
 
 Seat blocks stack and the panel scrolls inside itself. Each block's hand is the
-hand grid — `repeat(auto-fit, minmax(64px, 1fr))`, capped at five columns — so
+hand grid — `repeat(min(var(--hand), 5), 1fr)`, five columns — so
 *C* ≤ 5 is one row per seat and 6–9 is two. Nine seats is a panel you scroll,
 which is the honest ordering: tuned for four to six, survives nine.
 

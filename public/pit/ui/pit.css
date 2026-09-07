@@ -387,14 +387,17 @@ h1 { font-size: var(--step-3); margin: 0 0 0.5rem; }
 /* Every commodity in play gets a slot, always, in value order — which is
    public. Zeros are greyed rather than removed: position is how a pre-reader
    finds a thing, and a row that reorders itself is a row nobody can learn.
-   Five columns at 360px give slots above the 64px floor; C <= 5 is one row and
-   6-9 is two. */
+   Five columns at 360px give 66px slots, above the 64px floor; C <= 5 is one
+   row and 6-9 is two.
+
+   The cap is the column count itself rather than `auto-fit` over a minimum
+   width, because auto-fit widens the row as the screen does: on the 34rem
+   shell it fits seven, and a hand learned by position on the phone is then a
+   different shape on the Chromebook. */
 .hand {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(4rem, 1fr));
+  grid-template-columns: repeat(min(var(--hand), 5), 1fr);
   gap: 0.25rem;
-
-  @container (min-width: 0px) { grid-template-columns: repeat(min(var(--hand), 5), 1fr); }
 }
 
 .slot {
@@ -548,14 +551,12 @@ h1 { font-size: var(--step-3); margin: 0 0 0.5rem; }
 
 /* The same order, the same art and the same column count as the hand at the
    bottom of the table, smaller. A second layout for the same information is a
-   second thing to learn. */
+   second thing to learn, and that includes the shape it wraps into. */
 .reveal-hand {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(2.75rem, 1fr));
+  grid-template-columns: repeat(min(var(--hand), 5), 1fr);
   gap: 0.125rem;
   margin-top: 0.25rem;
-
-  @container (min-width: 0px) { grid-template-columns: repeat(min(var(--hand), 5), 1fr); }
 }
 
 .rslot {

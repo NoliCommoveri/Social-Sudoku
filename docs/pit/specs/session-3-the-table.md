@@ -426,10 +426,12 @@ it. The tint comes from `commodities.js` in JavaScript, which is why it lives
 there and not in CSS.
 
 **Five columns, wrapping.** At 360px, minus 16px of padding, five columns give
-68px slots — above the 64px floor `theme.css` sets. *C* ≤ 5 is one row and 6–9
-is two. The grid is `repeat(auto-fit, minmax(64px, 1fr))` with a five-column
-cap, and the hand size reaches CSS as `--hand` rather than as a number typed
-into a rule (§9).
+66px slots — above the 64px floor `theme.css` sets. *C* ≤ 5 is one row and 6–9
+is two. The grid is `repeat(min(var(--hand), 5), 1fr)`: the cap is the column
+count itself, not a minimum width a row is free to grow past, so the hand is
+the same shape on the Chromebook as on the phone and a hand learned by position
+stays learned. The hand size reaches CSS as `--hand` rather than as a number
+typed into a rule (§9).
 
 **The hand is also the target tracker.** The largest group carries a ring and
 reads `7/9`; there is no separate progress widget. `../design.md` §4 asks for
