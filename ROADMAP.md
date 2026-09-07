@@ -23,11 +23,12 @@ are:
 - Pit at `/pit/`, on the shelf beside sudoku: the rules core, the bots, the
   local driver, the table, the round-end reveal and the record — `public/pit/`.
   One person picks how many bots sit down and plays rounds against them on a
-  phone. A seat left alone is taken over by a bot sixty seconds later and
+  phone, and the whole of it has been played on the phone it was written for.
+  A seat left alone is taken over by a bot sixty seconds later and
   reclaimed by a tap. A corner opens the reveal — the card in full art, every
   seat's final hand and the counts it offered — and reaching the target draws
   the standings and says whether the session was written down.
-- 328 tests under `test/`, run by GitHub Actions on every push.
+- 329 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at `games.immotus.app`, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
@@ -171,11 +172,11 @@ button. Three existing specs, all pure client work with no server in them.
 `docs/sudoku/specs/slice-04` (unwritten), `slice-05-solver.md`,
 `slice-06-technique-library-hints.md`. Small, Small–Medium, Medium.
 
-### Phase 5 — Pit, on one device
+### Phase 5 — Pit, on one device ✅
 
 The whole game with no server under it: rules core, bots, the local driver, the
-table, scoring and the result row. Four sessions — three Medium and one
-Large — tabled in
+table, scoring and the result row. All four sessions are built and checked on
+the phone. Four sessions — three Medium and one Large — tabled in
 [`docs/pit/specs/README.md`](docs/pit/specs/README.md); the design is
 [`docs/pit/design.md`](docs/pit/design.md).
 
@@ -185,7 +186,7 @@ so all three run in a browser tab and the family can play against bots while the
 room is still unwritten. Phase 6 is then written against a rules module that
 exists rather than against `docs/gameroom.md` alone.
 
-**Sessions 1, 2 and 3 are built.** `public/pit/core/` holds the deal, the offer
+**Sessions 1, 2 and 3.** `public/pit/core/` holds the deal, the offer
 board, the blind swap, the corner, the scoring and the confidentiality boundary;
 `core/bot.js` holds the three levels, the target invariant and the latency that
 cannot see the board; `tick` gates the bots, one per tick, because the gate is a
@@ -204,7 +205,7 @@ makes, which is what keeps `table.js` down to creating elements and reporting
 taps. Offering and accepting are the same two-tap mechanism against the hand,
 because the hand is the only place a commodity is ever named.
 
-**Session 4 is built**, and is
+**Session 4** is
 [`docs/pit/specs/session-4-round-end-and-the-record.md`](docs/pit/specs/session-4-round-end-and-the-record.md).
 The reveal, the ending and what the rules module owed them — §2, §3 and §4 — are
 the full card art, every seat's final hand and the counts it offered, the
@@ -219,7 +220,9 @@ away the round in progress, so the failure reaches the ending screen as a
 sentence instead. A row opens at the deal carrying the table as it was dealt, and
 closes when the session ends — with the human seat's result, or with none, which
 is what an abandoned game looks like. Pit's tile is on the shelf and the front
-page links to it.
+page links to it. All three shapes a session can leave were read back out of
+`/admin`'s JSON export on the phone, which is the only way to see a written row
+until Phase 3.
 
 ### Phase 6 — GameRoom
 
@@ -286,18 +289,8 @@ S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
 board and keypad fit above the fold, which is the same question S2 asks and the
 one the top bar moved.
 
-**S10** is Pit's table, and it is the one to run next: the table is built, the
-tile is on the shelf and `/pit/` is reachable through the gate. Its last steps
-are the only reading anybody gets on whether §2.6's sixty seconds is the right
-number for a 5-year-old.
-
 **S11** is the sudoku board chooser and the win popup, and it needs neither the
 gate nor a database — it can be run on the phone now.
-
-**S12** is Pit's reveal, its ending and the record. It runs after S10, on the
-same sitting if there is time. Its step 6 — abandon a session, then export the
-JSON from `/admin` — is the only evidence the write path does what it says,
-because nothing reads the record until Phase 3.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in

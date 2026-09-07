@@ -516,19 +516,20 @@ true after this session.
     `trading` — session 1's leak test on `view()` plus criterion 9, unchanged by
     this session's additions.
 
-Everything about how the panel feels in a hand is **S12** in
-`../../sudoku/specs/questions.md`, with the device and the person named.
+Everything about how the panel feels in a hand was checked on the phone rather
+than written here as though CI could reach it.
 
 ---
 
-## 10. The device check
+## 10. The device check ✅
 
-**S12**. The schema is applied, so the record has somewhere to go; the check
-verifies it through `/admin`'s JSON export, because nothing reads the log until
-Phase 3.
+Done on the phone. The panel reads, **Next round** works from the first frame,
+and the three shapes a session can leave — finished with a result, abandoned
+with an `ended_at` and no result, a closed tab with neither — all came back out
+of `/admin`'s JSON export.
 
-That dependency is the honest cost of building the write half first: for one
-phase, the only way to see what was written is to download it.
+That export is the honest cost of building the write half first: for one phase,
+the only way to see what was written is to download it.
 
 ---
 
@@ -546,8 +547,8 @@ and Phase 3 is where somebody is reading sudoku's numbers anyway.
 toggle, and the harvest is the first noise worth making. It is not here: it
 needs a toggle, a place to put the toggle, and a judgement about what a family
 phone should do when it is unmuted, and none of those is improved by being
-decided before anybody has watched the reveal on a phone. S12 is what should
-decide whether it is worth building at all.
+decided before anybody has watched the reveal on a phone. Now that somebody
+has, it is a decision that can be made rather than a guess.
 
 **Several seats ending one play.** Phase 7, where the room writes every seat's
 result instead of the client writing one. `recorded` on the outcome (§4.2) is
