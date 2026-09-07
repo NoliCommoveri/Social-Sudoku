@@ -159,7 +159,8 @@ button. Three existing specs, all pure client work with no server in them.
 ### Phase 5 — Pit, on one device
 
 The whole game with no server under it: rules core, bots, the local driver, the
-table, scoring and the result row. Four sessions, each Medium, tabled in
+table, scoring and the result row. Four sessions — three Medium and one
+Large — tabled in
 [`docs/pit/specs/README.md`](docs/pit/specs/README.md); the design is
 [`docs/pit/design.md`](docs/pit/design.md).
 
@@ -174,14 +175,21 @@ board, the blind swap, the corner, the scoring and the confidentiality boundary;
 `core/bot.js` holds the three levels, the target invariant and the latency that
 cannot see the board; `tick` gates the bots, one per tick, because the gate is a
 field of `State` and `State` is opaque to a room. `public/pit/room/local.js` is
-the driver the client talks to and Phase 7 replaces with a socket. Session 3 —
-the table — is next and is not spec'd.
+the driver the client talks to and Phase 7 replaces with a socket.
 
 A seat that stops trading freezes its cards, and most four-seat rounds cannot
 then be won by anybody. `docs/pit/design.md` §2.6 settles it and nothing of it
 is built: pause, bot takeover of a seat idle for sixty seconds, and abandon.
 All three are rules actions, so they land before the table can draw a pause
-button, an abandon button, or the takeover countdown.
+button, an abandon button, or the takeover countdown — which is why session 3
+carries both halves and is Large where the other three are Medium.
+
+Session 3 is spec'd in
+[`docs/pit/specs/session-3-the-table.md`](docs/pit/specs/session-3-the-table.md)
+and is next: the §2.6 actions and the idle clock first, then the setup screen
+that picks the deck, the hand, the offer board, the two-tap trade, and
+`ui/present.js`, the pure half that carries everything CI could not otherwise
+reach.
 
 ### Phase 6 — GameRoom
 
@@ -244,6 +252,12 @@ run in that order: S6 leaves a database with the schema and the six players in
 it, S7 erases and rebuilds it, S8 needs both plus setup task **A3**, without
 which nobody can get past the gate, and S9 is the editor, which needs somebody
 to be through it.
+
+**S10** is Pit's table and is written ahead of the code it checks, so that its
+layout and timing criteria are not discovered at the point of calling session 3
+done. It runs after S8 and after session 3 is deployed. Its last steps are the
+only reading anybody gets on whether §2.6's sixty seconds is the right number
+for a 5-year-old.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in
