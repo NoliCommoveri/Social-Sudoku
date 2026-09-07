@@ -12,7 +12,7 @@
 
 import { mulberry32, shuffled } from './rng.js';
 import { HAND, MAX_OFFER, COMMODITY_KEYS, drawCommodities, valuesFor } from './commodities.js';
-import { botAction, botDelay, DEFAULT_LEVEL } from './bot.js';
+import { botAction, botDelay, botNotice, DEFAULT_LEVEL } from './bot.js';
 
 export const id = 'pit';
 
@@ -644,6 +644,41 @@ function botRng(state, seq) {
 }
 
 /**
+ * The view a bot gets: the seat's own view with the blocks nobody has had time
+ * to look at yet taken out of it.
+ *
+ * Everyone gets first refusal on a new offer for `botNotice(level)`, and at a
+ * table of bots that means the human does. Without it the board is unplayable
+ * from a phone: a bot decides on the next tick, so a block posted between two
+ * ticks can be gone 500ms later, before the person it landed in front of has
+ * found a matching block of their own to press.
+ *
+ * Done here rather than in `bot.js` because it needs `now` and `bot.js` has no
+ * clock and must not grow one — the whole of
+ * `../../../docs/pit/specs/session-2-bots-and-the-local-driver.md` §3 is that
+ * nothing about the board or the clock reaches a bot's latency. Filtering the view it is
+ * handed leaves that alone: the bot still decides purely, out of a smaller
+ * board. Its own offer stays visible, because withdrawing one it has already
+ * posted is not a race with anybody.
+ *
+ * @param {object} state
+ * @param {string} botId
+ * @param {string} level
+ * @param {number} now
+ * @returns {object} a view, as `view()` builds it
+ */
+function noticed(state, botId, level, now) {
+  const seen = view(state, botId);
+  const notice = botNotice(level);
+  const fresh = new Set(
+    state.offers.filter((offer) => offer.playerId !== botId && now - offer.postedAt < notice)
+      .map((offer) => offer.id),
+  );
+  if (!fresh.size) return seen;
+  return { ...seen, offers: seen.offers.filter((offer) => !fresh.has(offer.id)) };
+}
+
+/**
  * At most one bot acts per tick. When several gates are open the oldest goes
  * and the rest wait: a backgrounded phone comes back with every gate open and
  * would otherwise fire four actions into one frame, the client gets one change
@@ -665,7 +700,7 @@ function bots(state, now) {
   // tick of a round seeds them, or the round would open with a flurry.
   for (const seat of seated) {
     if (readyAt[seat.playerId] === undefined) {
-      readyAt[seat.playerId] = now + botDelay(levelOf(seat), botRng(state, seq++));
+      readyAt[seat.playerId] = now + botDelay(levelOf(seat), botRng(state, seq++), seated.length);
       changed = true;
     }
   }
@@ -681,8 +716,8 @@ function bots(state, now) {
     // The delay is drawn first and from its own substream, so how long a bot
     // waits cannot depend on how many draws its decision took — the board must
     // not be able to reach the clock even through the stream position.
-    readyAt[seat.playerId] = now + botDelay(levelOf(seat), botRng(state, seq++));
-    const action = botAction(view(state, seat.playerId), levelOf(seat), botRng(state, seq++));
+    readyAt[seat.playerId] = now + botDelay(levelOf(seat), botRng(state, seq++), seated.length);
+    const action = botAction(noticed(state, seat.playerId, levelOf(seat), now), levelOf(seat), botRng(state, seq++));
     changed = true;
     if (action && validate(state, seat.playerId, action).ok) {
       // `dispatch`, not `apply`: a caretaker acting on a seat must not stamp it

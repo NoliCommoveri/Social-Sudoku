@@ -18,11 +18,16 @@ import { HAND, MAX_OFFER } from './commodities.js';
  * `../../../docs/pit/specs/session-2-bots-and-the-local-driver.md` §3. An easy
  * bot sees none, so it plays the board in front of it and cannot compute
  * pressure at all.
+ *
+ * `minDelay`/`maxDelay` are **the table's** cadence, not one seat's: how often
+ * some bot takes a turn, whatever it decides to do with it. `botDelay` divides
+ * that among however many bot seats there are. `notice` is how long a block has
+ * to have been on the table before a bot will look at it.
  */
 const LEVELS = {
-  easy: { recall: 0, minDelay: 1600, maxDelay: 3200, noise: 0.25 },
-  normal: { recall: 8, minDelay: 1000, maxDelay: 2200, noise: 0.12 },
-  hard: { recall: 24, minDelay: 800, maxDelay: 1600, noise: 0.05 },
+  easy: { recall: 0, minDelay: 1600, maxDelay: 3200, notice: 3500, noise: 0.25 },
+  normal: { recall: 8, minDelay: 1000, maxDelay: 2200, notice: 2500, noise: 0.12 },
+  hard: { recall: 24, minDelay: 800, maxDelay: 1600, notice: 1500, noise: 0.05 },
 };
 
 export const BOT_LEVELS = Object.keys(LEVELS);
@@ -30,7 +35,7 @@ export const BOT_LEVELS = Object.keys(LEVELS);
 /** A typo in a seat list must not crash a game. */
 export const DEFAULT_LEVEL = 'normal';
 
-/** @param {string} [level] @returns {{ recall: number, minDelay: number, maxDelay: number, noise: number }} */
+/** @param {string} [level] @returns {{ recall: number, minDelay: number, maxDelay: number, notice: number, noise: number }} */
 function settings(level) {
   return LEVELS[level] ?? LEVELS[DEFAULT_LEVEL];
 }
@@ -38,20 +43,52 @@ function settings(level) {
 /**
  * How long this bot waits before its next turn.
  *
- * The signature is the guarantee: it takes the level and the rng and nothing
- * else, so latency cannot correlate with how good the board is. A bot that
- * hesitated on bad offers and pounced on good ones would be read as a tell
- * within one session, and the only way to be sure it does not is to make the
- * correlation unexpressible. `tick` draws this from its own substream for the
- * same reason.
+ * The range in `LEVELS` is what the *table* should feel like, so the seat's own
+ * wait is that range multiplied by how many bot seats share the table. Without
+ * the multiplier the level names a per-seat rate and the board speeds up with
+ * every bot added: five bots each pausing 1000–2200ms put a change on the
+ * screen every 300ms, which is faster than anyone can read it and faster than
+ * `tick` will even deliver, so at a full table every level collapses onto the
+ * tick interval and the level knob stops doing anything.
+ *
+ * What the signature keeps out is the guarantee: level, rng, and a seat count
+ * fixed for the session. No board reaches it, so latency cannot correlate with
+ * how good the board is. A bot that hesitated on bad offers and pounced on good
+ * ones would be read as a tell within one session, and the only way to be sure
+ * it does not is to make the correlation unexpressible. `tick` draws this from
+ * its own substream for the same reason.
  *
  * @param {string} [level]
  * @param {() => number} rng
+ * @param {number} [seats] bot-driven seats at the table
  * @returns {number} milliseconds
  */
-export function botDelay(level, rng) {
+export function botDelay(level, rng, seats = 1) {
   const { minDelay, maxDelay } = settings(level);
-  return minDelay + Math.floor(rng() * (maxDelay - minDelay + 1));
+  const spread = minDelay + Math.floor(rng() * (maxDelay - minDelay + 1));
+  return spread * Math.max(1, seats);
+}
+
+/**
+ * How long a block has to have been on the table before this bot will look at
+ * it. Everyone gets first refusal on every offer for this long, and at a table
+ * where the other seats have no hands and no eyes that means the human does.
+ *
+ * Without it a block posted between two ticks is gone on the next one: a bot
+ * decides in the 500ms `tickIntervalMs` allows, and a person has to see the
+ * card land, find a matching block of their own and press it. The window is the
+ * reaction time the bots are pretending to have, and it is the difference
+ * between a game and a demo running next to you.
+ *
+ * Levels differ here because a slower read is a real handicap and this is the
+ * one place difficulty is allowed to be one — it costs a hard bot the trade an
+ * easy bot misses, rather than handing either a card it should not see.
+ *
+ * @param {string} [level]
+ * @returns {number} milliseconds
+ */
+export function botNotice(level) {
+  return settings(level).notice;
 }
 
 /* ------------------------------------------------------------------ hashing */
