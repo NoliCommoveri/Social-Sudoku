@@ -62,10 +62,13 @@ The hub's front page, and the thing seen most.
 
 - Games as large tiles with their own art. A tile is legible as *which game*
   from across a room.
-- The family strip: everybody's avatar, tappable to switch who you are.
 - The recent play log — "Tuesday: sudoku, Pit, Pit" with faces. The site's
-  memory, made the hero rather than a leaderboard. See `identity-and-stats.md`
-  §5, I1.
+  memory, made the hero rather than a leaderboard, with one small overall tile
+  above it and no ordering of the family anywhere on the page
+  (`identity-and-stats.md` §4.3). It sits directly under the games, because on
+  the 360px phone anything below the family strip is a second scroll and the
+  thing you have to scroll to is not the hero.
+- The family strip: everybody's avatar, tappable to switch who you are.
 - Nothing else. No settings gear on the front page, no news, no announcements.
 
 ## 4. Tokens

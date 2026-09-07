@@ -14,7 +14,7 @@ live only as the one-line entry in §6.
 | 6 | [`slice-06-technique-library-hints.md`](slice-06-technique-library-hints.md) | Medium | Spec'd, not started |
 | 7 | [`slice-07-storage-foundation.md`](slice-07-storage-foundation.md) | Medium | **Superseded** — rewritten for D1 as hub Phase 2 |
 | 8 | Erase, JSON export, re-import | — | Built as hub Phase 2 Session B: [`../../hub/specs/phase-2-session-b-erase-export.md`](../../hub/specs/phase-2-session-b-erase-export.md) |
-| 9 | Timer + stats + best times | — | Became hub Phase 3 |
+| 9 | Timer + stats + best times | — | Became hub Phase 3: the timer is [`../../hub/specs/phase-3-session-b-sudoku-timer-and-its-row.md`](../../hub/specs/phase-3-session-b-sudoku-timer-and-its-row.md), the bests are its Session C |
 | 10 | WebSocket sync + race mode | — | Became hub Phase 8 |
 | 11 | PWA | — | Became hub Phase 10 |
 
@@ -51,9 +51,11 @@ and a criterion nobody owns is a criterion that gets assumed. S1 connected the
 repo to Cloudflare and is done; S2 is slice 1's four device checks; S4 is slice
 2's two; S5 is slice 3's, and it is the one that decides whether the easy tier
 is easy enough. **S2, S4 and S5 are all still open**; they are about the board,
-which nothing since has touched. Everything in the file that was not about
-sudoku — the hub's database, gate, editor and backup path, and Pit's table and
-reveal — has been run on the deployment and is gone from it. Slice 6's library legibility on the phone
+which nothing since has touched. So are **S11**, and **S12** and **S13**, which
+Phase 3 added — the front page's play log, and the clock the timer session puts
+in the sudoku bar, which can undo S11's first step on its own. Everything in the
+file that was already run on the deployment — the hub's database, gate, editor
+and backup path, and Pit's table and reveal — is gone from it. Slice 6's library legibility on the phone
 needs the same treatment when it starts, and the hub's own checks are in
 `../../design-language.md` §5.
 

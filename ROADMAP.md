@@ -153,18 +153,42 @@ picking, not editing.** A `play_results` row needs a `player_id`, which the
 
 ### Phase 3 — The record
 
-Delivers **H4**. Per-game and overall views, the play log on the front page, and
-sudoku solo writing a row when a board is finished. This is the first phase
-where the site does something the standalone sudoku could not.
+Delivers **H4**. The play log and a small overall tile on the front page, sudoku
+writing a row when a board is finished, and per-game views inside each game.
+This is the first phase where the site does something the standalone sudoku
+could not.
 
 **The write path landed earlier, in Pit session 4.** Pit is the game that
 reaches an ending first, so `POST /api/plays` and `POST /api/plays/:id/end` are
-built and in use — game-agnostic, and sudoku's call through them is two lines.
-What is left here is the reading: the log, the per-game views, the overall tile,
-and `docs/identity-and-stats.md` §5's open item I1, which is what the front page
-shows.
+built and in use, game-agnostic. What is left here is the reading, and sudoku's
+elapsed time, which does not exist yet.
 
-Absorbs the old slice 9. Medium.
+`docs/identity-and-stats.md` §4.3 settles what the front page shows: the log is
+the hero, the tile is small, and the page never puts the six of you in order.
+Detailed stats live inside each game, because what `config_json` and
+`detail_json` mean is per-game knowledge the Worker deliberately does not hold.
+
+Three sessions, tabled in
+[`docs/hub/specs/README.md`](docs/hub/specs/README.md). Absorbs the old
+sudoku slice 9.
+
+**Session A — the read API and the log.** Medium.
+[`docs/hub/specs/phase-3-session-a-the-read-api-and-the-log.md`](docs/hub/specs/phase-3-session-a-the-read-api-and-the-log.md).
+`GET /api/plays` and `GET /api/stats` in `worker/record.js`, the pure half in
+`public/shared/record.js`, and the log and tile on the shelf. The Worker hands
+`config_json` and `detail_json` back unread and never groups by day — a day is
+the phone's day, and a UTC Worker would file half of every evening under
+tomorrow.
+
+**Session B — sudoku's timer and its row.** Small–Medium.
+[`docs/hub/specs/phase-3-session-b-sudoku-timer-and-its-row.md`](docs/hub/specs/phase-3-session-b-sudoku-timer-and-its-row.md).
+The `POST` is two lines; the number it posts is the session. Elapsed play time
+accumulated across sittings, because a board resumed the next morning would
+otherwise record a fourteen-hour best.
+
+**Session C — the per-game views.** Medium. Not spec'd until A is built.
+Sudoku's bests by size and tier, Pit's points and corners, each inside its own
+game over `GET /api/plays?game=…`. No new endpoint.
 
 ### Phase 4 — Finish sudoku
 
@@ -280,13 +304,16 @@ not exist at all until Phase 2.
 ## Open items
 
 `docs/sudoku/specs/questions.md` holds the browser checks. Everything the hub
-and Pit owed is run; what is left is four, all sudoku's and all about the board:
-**S2**, **S4**, **S5** and **S11**.
+and Pit owed so far is run. Four are open and about the board — **S2**, **S4**,
+**S5** and **S11** — and two more are written against Phase 3 and cannot be run
+until it is built: **S12**, the front page's play log and tile, and **S13**,
+sudoku's clock.
 
 S2 and **S11** are worth running in one sitting: S11 step 1 is whether the whole
 board and keypad fit above the fold, which is the same question S2 asks and the
 one the top bar moved. Neither needs the gate or the database, and Phase 4 is
-the phase that would act on what they say.
+the phase that would act on what they say. S13 asks step 1 again, because a
+readout in that bar is the next thing that can push the keypad off the screen.
 
 Hub-level open items are in the documents that own them: identity and stats in
 [`docs/identity-and-stats.md`](docs/identity-and-stats.md), the visual system in
