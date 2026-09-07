@@ -30,14 +30,30 @@ test('every commodity is named, fruited and tinted, and no two share a tint', ()
   assert.equal(tints.size, COMMODITY_KEYS.length);
 });
 
+// Art that is not a commodity. `back` is the one card back; `thorns` and `vine`
+// are the two cards of `docs/pit/design.md` §2.5, which have pictures and
+// nothing else — no deck slot, no key in COMMODITIES, no rule that deals them.
+// Naming them keeps the set equality below exact, so a stray or missing file
+// still fails.
+const NON_COMMODITY_ART = ['back', 'thorns', 'vine'];
+const SPECIALS = ['thorns', 'vine'];
+
 // The key is the art's basename. If that stops being true the client picks up a
 // mapping table, so it is worth a test rather than a convention.
 test('every commodity key names a fruit crop and a card', () => {
   const dir = (name) => readdirSync(fileURLToPath(new URL(`../public/pit/art/${name}/`, import.meta.url)));
   const fruit = dir('fruit').filter((f) => f.endsWith('.webp')).map((f) => f.replace('.webp', ''));
   const cards = dir('cards').filter((f) => f.endsWith('.webp')).map((f) => f.replace('.webp', ''));
-  assert.deepEqual(fruit.sort(), [...COMMODITY_KEYS].sort());
-  assert.deepEqual(cards.sort(), [...COMMODITY_KEYS, 'back'].sort());
+  assert.deepEqual(fruit.sort(), [...COMMODITY_KEYS, ...SPECIALS].sort());
+  assert.deepEqual(cards.sort(), [...COMMODITY_KEYS, ...NON_COMMODITY_ART].sort());
+});
+
+// The specials are art only until §2.5 is built. A key that appears in
+// COMMODITIES is a card the deal can hand out, and neither of these is one yet.
+test('the special cards are not commodities', () => {
+  for (const key of SPECIALS) {
+    assert.ok(!COMMODITY_KEYS.includes(key), `${key} is in COMMODITIES`);
+  }
 });
 
 // The virtues are the commodities; the fruit is only what the picture shows.
