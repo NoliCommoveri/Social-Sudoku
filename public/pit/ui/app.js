@@ -66,12 +66,12 @@ async function start() {
 function buildSetup() {
   const { levels, defaultLevel } = seatLimits();
 
-  // Each tile carries its count and the deck it makes: "4 bots" and "five fruit
+  // Each tile carries its count and the deck it makes: "4 bots" and "five kinds
   // in play" are the same fact, and only one of them is visible otherwise.
   fill($('bots'), botRange().map((count) => ({
     value: count,
     label: String(count),
-    sub: `${count + 1} fruit`,
+    sub: `${count + 1} kinds`,
     className: 'tile',
   })), 'botCount');
 

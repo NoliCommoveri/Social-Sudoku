@@ -44,7 +44,8 @@ export const BASE_VALUE = 55;   // the cheapest commodity in play
 export const VALUE_STEP = 5;
 ```
 
-The nine, each with its key, its display name, its fruit and its tint from
+The nine, each with its key, its display name (the virtue), the fruit its
+picture shows, and its tint from
 `../design.md` §2.1. The tint lives here rather than in CSS because the client
 needs it in JavaScript to colour a count badge, and one source beats two that
 drift.

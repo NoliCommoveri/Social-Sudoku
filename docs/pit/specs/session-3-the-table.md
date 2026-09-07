@@ -365,7 +365,7 @@ tile row is built from the range, so a tenth commodity would widen it with no
 edit here.
 
 The tile row says what the answer buys: each bot tile carries its count and the
-deck it makes, because "4 bots" and "five fruit in play" are the same fact and
+deck it makes, because "4 bots" and "five kinds in play" are the same fact and
 only one of them is visible otherwise.
 
 Auto-harvest is `../design.md` §2.4's toggle. It is on the setup screen rather
@@ -506,7 +506,7 @@ receiptFor(previousHand, nextHand) -> { got, gave } | null
 
 The driver applies one action per push, so a diff is one trade and is
 unambiguous. The `trade` event that arrives after the view names who it was
-with; the view says what it was. The line shows *Kiwi ×3 from Mara* for a beat
+with; the view says what it was. The line shows *Peace ×3 from Mara* for a beat
 and then clears.
 
 This is also the argument for pushing whole views rather than deltas, made
@@ -670,9 +670,10 @@ On the first view of a session the client constructs an `Image()` for each of
 until the deal, so a `<link rel="preload">` in the head cannot name them; twelve
 kilobytes apiece makes the whole set cheap enough not to need cleverness.
 
-Every commodity is carried by its fruit **and** its tint, never by its name
+Every commodity is carried by its picture **and** its tint, never by its name
 alone — `../../design-language.md` §2's avatar rule, and the reason the
-exclusion pairs in `../design.md` §2.1 exist.
+exclusion pairs in `../design.md` §2.1 exist. Where a name is shown it is the
+virtue, per `../design.md` §2.1; no label in the client reads a fruit.
 
 ## 9. Numbers, and where they are not
 

@@ -4,7 +4,8 @@
 
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readdirSync } from 'node:fs';
+import { readdirSync, readFileSync } from 'node:fs';
+import { join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 import { mulberry32 } from '../public/pit/core/rng.js';
@@ -37,6 +38,17 @@ test('every commodity key names a fruit crop and a card', () => {
   const cards = dir('cards').filter((f) => f.endsWith('.webp')).map((f) => f.replace('.webp', ''));
   assert.deepEqual(fruit.sort(), [...COMMODITY_KEYS].sort());
   assert.deepEqual(cards.sort(), [...COMMODITY_KEYS, 'back'].sort());
+});
+
+// The virtues are the commodities; the fruit is only what the picture shows.
+// A label read off `.fruit` is how "Love" became "Apple" on the table once, so
+// the rule is a grep rather than a convention.
+test('no UI module labels a commodity by its fruit', () => {
+  const dir = fileURLToPath(new URL('../public/pit/ui/', import.meta.url));
+  for (const file of readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+    const src = readFileSync(join(dir, file), 'utf8').replaceAll('art/fruit/', '');
+    assert.ok(!/\bfruit\b/i.test(src), `${file} reads a commodity's fruit`);
+  }
 });
 
 test('the exclusion pairs name commodities that exist, and are not self-pairs', () => {
