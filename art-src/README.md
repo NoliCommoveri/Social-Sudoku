@@ -3,8 +3,10 @@
 Masters. Nothing here is served — `public/` is the Worker's assets directory and
 this is not under it.
 
-`pit/` holds the nine Fruit of the Spirit cards and the one card back, all
-1024×1536 PNG. The two sets
-under `public/pit/art/` are derived from them; `docs/pit/design.md` §2.1 gives
-the crop box and the sizes. They are kept because the crop is otherwise
-irreversible and there is no CLI here to redo it from.
+`pit/` holds the nine Fruit of the Spirit cards, the one card back, and the two
+special cards — `thorns` and `vine`, the penalty and the wild of
+`../docs/pit/design.md` §2.5, which have art and no rules yet — all 1024×1536
+PNG. The two sets under `public/pit/art/` are derived from them;
+`../docs/pit/design.md` §2.1 gives the crop box and the sizes. They are kept
+because the crop is otherwise irreversible and there is no CLI here to redo it
+from.

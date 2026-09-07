@@ -133,9 +133,9 @@ Goodness therefore excludes both other berries; Joy and Gentleness may sit
 together, navy against lilac. The constraint is droppable above seven seats,
 where every fruit is in play by force.
 
-**Assets.** `public/pit/art/` holds two derived sets, both WebP, 836KB together:
+**Assets.** `public/pit/art/` holds two derived sets, both WebP, 952KB together:
 
-- `cards/<commodity>.webp` — the full illustration at 512×768, ~75KB each. Used
+- `cards/<key>.webp` — the full illustration at 512×768, ~75KB each. Used
   where the picture is the point and there is room for it: the round-end reveal,
   the harvest celebration, the game's tile on the shelf. Never during live play;
   nine portrait cards do not lay out at 360px.
@@ -144,17 +144,27 @@ where every fruit is in play by force.
   commodity, because a back that differed at all would be the leak §2.2 spends
   the whole game preventing. Its teal is dark enough not to be read as
   Self-Control's, which is the only tint in the set it comes near.
-- `fruit/<commodity>.webp` — a 172px circular crop of the card's corner roundel,
-  fruit only, no text, transparent outside the circle, ~12KB each. This is the
-  working asset: hand groups, count badges, offer rows, the target tracker. It
-  carries no text, so §6 uses it unchanged.
+- `fruit/<key>.webp` — a 172px circular crop of the card's corner roundel,
+  the picture only, no text, transparent outside the circle, ~10KB each. This is
+  the working asset: hand groups, count badges, offer rows, the target tracker.
+  It carries no text, so §6 uses it unchanged.
 
-Both are generated from the ten 1024×1536 masters in `art-src/pit/` — nine faces
-and the back — which are in the repo and not served. The fruit crop is the square 172px on a side centred
+Both are generated from the twelve 1024×1536 masters in `art-src/pit/` — nine
+commodity faces, the back, and the two special cards below — which are in the
+repo and not served. The fruit crop is the square 172px on a side centred
 at (135, 98) in the master, circle-masked — that box clears the name band at the
-bottom of the roundel on all nine. The masters are kept because without them the
-crop box is irreversible and there is no CLI to redo it from. The back has no
-derived crop; it is only downscaled.
+bottom of the roundel on all twelve. The masters are kept because without them
+the crop box is irreversible and there is no CLI to redo it from. The back has
+no derived crop; it is only downscaled.
+
+**Two of the twelve are not commodities.** `thorns` and `vine` are the art for
+the two cards §2.5 defers — the penalty and the wild. They are drawn to the same
+1024×1536 layout as the nine and derive through the same crop, so both sets carry
+them, but they are not keys in `COMMODITIES`, nothing deals them, and no screen
+requests them yet. Their names are The Thorns (Matthew 13:22) and The Vine (John
+15:5); the roundel labels read THORNS and VINE. Having the pictures first is what
+lets §2.5 be decided on how the mechanic plays rather than on whether there is
+anything to put on the card.
 
 ### 2.2 Core loop
 
@@ -207,12 +217,18 @@ A corner scores the commodity's point value, which §2.1 assigns by rank within
 the set drawn for the session. **Decided: a session ends at 300 points**, set at
 room setup. That is five or six rounds, which is one sitting.
 
-**Not in v1 — deferred, not rejected:**
-- Wild card (classic "Bull") — allows a corner with 8 + wild, at reduced value
-- Penalty card (classic "Bear") — dead weight, penalizes whoever holds it at round end
-- Doubling the corner value when cornered on the wild
+**Not in v1 — deferred, not rejected.** Two cards, whose art exists (§2.1) and
+whose rules do not:
 
-These add real depth but they also add a second information channel and a lot of edge cases. **Revisit after:** the base game has been played through a full session by all four humans.
+- **The Vine** — the wild. Allows a corner with 8 + the Vine, at reduced value.
+- **The Thorns** — the penalty. Dead weight; costs whoever is holding it at round end.
+- Doubling the corner value when cornered on the Vine.
+
+These add real depth but they also add a second information channel and a lot of
+edge cases: a card that is not a commodity has to be offerable, acceptable and
+countable without breaking §2.2's rule that only the count is public. **Revisit
+after:** the base game has been played through a full session by all four
+humans.
 
 ### 2.6 A seat that stops trading
 
