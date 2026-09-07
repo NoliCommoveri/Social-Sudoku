@@ -14,6 +14,7 @@
     --ink-soft: #5b6470;
     --key: #f2f4f7;
     --key-edge: #cfd5dd;
+    --win: #1f8a4c;
   }
 
   * { box-sizing: border-box; }
@@ -26,17 +27,20 @@
   }
 
   /* One tap back to the shelf. A game the 5-year-old cannot get out of is a
-     game they stop opening (docs/design-language.md §2). */
+     game they stop opening (docs/design-language.md §2). It rides in the top
+     bar rather than on a line of its own: a row above the board is a row the
+     keypad loses at the bottom of the screen. */
   .back {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    min-height: 48px;
-    padding: 0 8px;
-    margin: 2px 0 0 -8px;
+    min-height: 44px;
+    padding: 0 6px;
+    margin-left: -6px;
     color: var(--ink-soft);
     font-weight: 600;
     text-decoration: none;
+    white-space: nowrap;
   }
 
   #app {
@@ -44,12 +48,92 @@
     max-width: 1100px;
     margin: 0 auto;
     padding: 8px;
+  }
+
+  /* Back link, title and board chooser on one row. The space above the board is
+     the scarcest on a 360px phone: everything spent here is a keypad key the
+     player cannot see at the same time as the grid. */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 8px;
+    margin: 4px 2px 8px;
 
     & h1 {
+      flex: 1;
       font-size: 1.1rem;
       font-weight: 600;
-      margin: 4px 2px 10px;
+      margin: 0;
+      text-align: center;
       letter-spacing: 0.01em;
+    }
+  }
+
+  /* Size and difficulty live behind this one button, above the board and well
+     away from the keypad. Two always-open rows of choices sat between grid and
+     keypad, which cost a screenful and got mis-tapped mid-puzzle. */
+  .chooser {
+    font: inherit;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    flex: none;
+    min-height: 44px;
+    padding: 0 12px;
+    border: 1px solid var(--key-edge);
+    border-radius: 999px;
+    background: var(--key);
+    color: var(--ink);
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+
+    & .caret { color: var(--ink-soft); font-size: 0.8em; }
+    &:active { background: var(--sel); }
+  }
+
+  /* A popover, so it sits in the top layer over the board rather than pushing
+     it down, and light-dismisses on the next tap anywhere else. */
+  #board-menu {
+    margin: 0;
+    padding: 12px;
+    width: min(300px, calc(100vw - 24px));
+    border: 1px solid var(--key-edge);
+    border-radius: 14px;
+    background: #fff;
+    box-shadow: 0 12px 30px rgb(16 24 40 / 0.18);
+
+    /* Placement without anchor positioning: under the top bar, centred. */
+    position: fixed;
+    inset: auto;
+    top: 64px;
+    left: 50%;
+    translate: -50% 0;
+
+    & .menu-title {
+      margin: 0 2px 6px;
+      color: var(--ink-soft);
+      font-size: 0.85rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+    & #sizes { margin-bottom: 14px; }
+    &::backdrop { background: rgb(16 24 40 / 0.2); }
+  }
+
+  /* Chrome current: hang it off the button it belongs to. */
+  @supports (anchor-name: --a) {
+    .chooser { anchor-name: --chooser; }
+    #board-menu {
+      position-anchor: --chooser;
+      position-area: block-end span-inline-start;
+      position-try-fallbacks: flip-block;
+      top: auto;
+      left: auto;
+      translate: none;
+      margin-top: 6px;
     }
   }
 
@@ -60,9 +144,17 @@
     align-items: start;
   }
 
+  /* The board gives way before the keypad does. Below roughly 740px of viewport
+     the square would push the bottom keys off the screen, which is the thing
+     this layout exists to prevent, so it shrinks instead. RESERVE is what sits
+     above and below it at 9x9 — top bar, status line, the tallest keypad, gaps
+     and padding — and on a phone tall enough for all of it the cap never
+     binds. */
   .board-wrap {
     container-type: inline-size;
     width: 100%;
+    --reserve: 382px;
+    max-width: max(240px, min(100%, calc(100dvh - var(--reserve))));
   }
 
   .side {
@@ -88,14 +180,14 @@
     gap: 6px;
   }
 
-  /* Two rows of choices, both filled by app.js: dimensions from SIZE_KEYS,
-     difficulties from TIER_IDS. Same shape, because they are the same kind of
-     choice — one board out of a short list. */
+  /* Two rows of choices inside the menu, both filled by app.js: dimensions from
+     SIZE_KEYS, difficulties from TIER_IDS. Same shape, because they are the
+     same kind of choice — one board out of a short list. */
   #sizes, #tiers {
     display: flex;
     gap: 6px;
 
-    & .pick { flex: 1; font-size: 1rem; }
+    & .pick { flex: 1; font-size: 1rem; min-height: 52px; }
     & .pick[aria-pressed='true'] {
       background: var(--sel);
       border-color: var(--entered);
@@ -120,6 +212,121 @@
     &:disabled { color: var(--line); cursor: default; }
   }
 
+  /* Finishing a puzzle is the whole point of doing one, so it gets the screen:
+     a modal dialog fills the viewport, the card sits in the middle of it, and a
+     tap on the ground around the card dismisses. */
+  #win {
+    width: 100%;
+    max-width: none;
+    height: 100%;
+    max-height: none;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: transparent;
+    inset: 0;
+    overflow: hidden;
+
+    &::backdrop { background: rgb(12 16 24 / 0.55); }
+    &[open] { display: grid; place-items: center; }
+  }
+
+  .win-card {
+    position: relative;
+    width: min(340px, calc(100vw - 32px));
+    padding: 24px 20px 20px;
+    border-radius: 22px;
+    background: #fff;
+    box-shadow: 0 18px 50px rgb(12 16 24 / 0.35);
+    text-align: center;
+    animation: pop 320ms cubic-bezier(0.2, 1.3, 0.4, 1) both;
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.7); opacity: 0; }
+    to { transform: scale(1); opacity: 1; }
+  }
+
+  .win-mark {
+    margin: 0;
+    font-size: 3.5rem;
+    line-height: 1;
+    animation: cheer 900ms ease-in-out 2 both;
+  }
+
+  @keyframes cheer {
+    0%, 100% { transform: rotate(-8deg) scale(1); }
+    50% { transform: rotate(8deg) scale(1.12); }
+  }
+
+  #win-line {
+    margin: 10px 0 4px;
+    font-size: 1.75rem;
+    line-height: 1.15;
+    color: var(--win);
+  }
+
+  .win-sub {
+    margin: 0 0 18px;
+    color: var(--ink-soft);
+    font-size: 0.95rem;
+  }
+
+  .win-actions {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .win-key {
+    font: inherit;
+    font-size: 1.05rem;
+    font-weight: 600;
+    min-height: 52px;
+    padding: 0 16px;
+    border: 1px solid var(--key-edge);
+    border-radius: 12px;
+    background: var(--key);
+    color: var(--ink);
+    cursor: pointer;
+
+    &.primary {
+      background: var(--win);
+      border-color: var(--win);
+      color: #fff;
+    }
+  }
+
+  /* Across the whole screen rather than inside the card, and transparent to
+     taps so the ground underneath still dismisses. Filled by app.js on each win
+     and emptied on close, so nothing animates behind a closed dialog. */
+  .confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+
+    & i {
+      position: absolute;
+      top: -20px;
+      width: 8px;
+      height: 14px;
+      border-radius: 2px;
+      animation: fall linear forwards;
+    }
+  }
+
+  @keyframes fall {
+    from { transform: translateY(0) rotate(0deg); opacity: 1; }
+    to { transform: translateY(105vh) rotate(720deg); opacity: 0.2; }
+  }
+
+  /* Nothing here is load-bearing; it is all celebration (design-language §2). */
+  @media (prefers-reduced-motion: reduce) {
+    .win-card, .win-mark { animation: none; }
+    .confetti { display: none; }
+  }
+
   /* Wide: the pad sits beside the board. Narrow: beneath it — there is no
      room, and scrolling a sudoku board is worse than a small number pad.
      This block comes last so it wins on source order against the base rules
@@ -133,13 +340,25 @@
 </head>
 <body>
 <main id="app">
-  <a class="back" href="/">&larr; Gameroom</a>
-  <h1>Sudoku</h1>
+  <div class="topbar">
+    <a class="back" href="/">&larr; Gameroom</a>
+    <h1>Sudoku</h1>
+    <button type="button" class="chooser" id="chooser" popovertarget="board-menu" aria-expanded="false">
+      <span id="chooser-label"></span>
+      <span class="caret" aria-hidden="true">&#9662;</span>
+    </button>
+  </div>
+
+  <div id="board-menu" popover>
+    <p class="menu-title" id="sizes-label">Grid</p>
+    <div id="sizes" role="group" aria-labelledby="sizes-label"></div>
+    <p class="menu-title" id="tiers-label">Difficulty</p>
+    <div id="tiers" role="group" aria-labelledby="tiers-label"></div>
+  </div>
+
   <div class="layout">
     <div class="board-wrap"><div id="board"></div></div>
     <div class="side">
-      <div id="sizes" role="group" aria-label="Grid size"></div>
-      <div id="tiers" role="group" aria-label="Difficulty"></div>
       <p id="status" role="status" aria-live="polite"></p>
       <!-- app.js inserts the digit keys ahead of these and places every key
            on the grid; the markup order is the tab order. -->
@@ -153,6 +372,20 @@
     </div>
   </div>
 </main>
+
+<dialog id="win" aria-labelledby="win-line">
+  <div class="confetti" id="confetti" aria-hidden="true"></div>
+  <div class="win-card">
+    <p class="win-mark" id="win-mark" aria-hidden="true">&#127881;</p>
+    <h2 id="win-line">Great job!</h2>
+    <p class="win-sub" id="win-sub"></p>
+    <div class="win-actions">
+      <button type="button" class="win-key primary" id="win-again" autofocus>Another one</button>
+      <button type="button" class="win-key" id="win-close">Show the board</button>
+    </div>
+  </div>
+</dialog>
+
 <script type="module" src="./ui/app.js"></script>
 </body>
 </html>

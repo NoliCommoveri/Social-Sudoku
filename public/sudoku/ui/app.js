@@ -5,7 +5,8 @@
 // Size and difficulty are both runtime choices. Size changes the geometry, so
 // board and keypad are rebuilt on every switch; difficulty does not, so it only
 // deals. Each size and difficulty keeps its own saved game, and switching away
-// from a board never destroys it.
+// from a board never destroys it. Both live in a popover off the top bar, so
+// neither is under a thumb that is aiming at the keypad.
 
 import {
   SIZES, SIZE_KEYS, DEFAULT_SIZE_KEY,
@@ -14,6 +15,7 @@ import {
 import { makeGeometry } from '../core/grid.js';
 import { deal } from '../core/generator.js';
 import { createBoard } from './board.js';
+import { createCelebration } from './celebrate.js';
 import { loadGame, saveGame, loadPrefs, savePrefs, debounce } from '../store/local.js';
 
 const SAVE_DELAY_MS = 200;
@@ -22,6 +24,9 @@ const els = {
   board: document.getElementById('board'),
   sizes: document.getElementById('sizes'),
   tiers: document.getElementById('tiers'),
+  menu: document.getElementById('board-menu'),
+  chooser: document.getElementById('chooser'),
+  chooserLabel: document.getElementById('chooser-label'),
   pad: document.getElementById('pad'),
   status: document.getElementById('status'),
   erase: document.getElementById('erase'),
@@ -54,6 +59,11 @@ const state = {
 // under the size and difficulty it was made on.
 const persist = debounce(saveGame, SAVE_DELAY_MS);
 
+const celebration = createCelebration({
+  onAgain: () => newGame(),
+  onClose: () => board.focus(),
+});
+
 function save() {
   persist(sizeKey, tierId, {
     seed: state.seed,
@@ -85,6 +95,7 @@ function randomSeed() {
 }
 
 function newGame(seed = randomSeed()) {
+  celebration.close();
   const dealt = deal(geom, seed, tierFor(sizeKey, tierId));
   state.seed = seed;
   state.givens = dealt.givens;
@@ -135,12 +146,27 @@ function isComplete() {
   return true;
 }
 
+// The dialog is the only thing that reads a finished puzzle as an event rather
+// than a state, so it is fired from the transition and not from `render`, which
+// runs on every tap and on restoring a board that was already finished.
 function apply(cell, value) {
+  const wasSolved = state.solved;
   state.values[cell] = value;
   state.marks.clear();
   state.solved = isComplete();
   save();
   render();
+  if (state.solved && !wasSolved) celebration.show(solvedSubtitle());
+}
+
+// How much of the board was theirs. A 9x9 easy deal leaves 31 cells, and 31 is
+// a better thing to be told you did than "solved".
+function solvedSubtitle() {
+  let filled = 0;
+  for (let cell = 0; cell < geom.cellCount; cell++) {
+    if (state.givens[cell] === 0) filled++;
+  }
+  return `${boardName()} \u2014 you filled in ${filled} squares.`;
 }
 
 function setValue(cell, value) {
@@ -189,9 +215,17 @@ function statusText() {
   return `${empty} to go.`;
 }
 
+// What the chooser button says when shut, which is most of the time: the board
+// you are on, not the word "Options".
+function boardName() {
+  const { n } = SIZES[sizeKey];
+  return `${n}×${n} · ${TIER_LABELS[tierId]}`;
+}
+
 function render() {
   board.render(state);
   els.status.textContent = statusText();
+  els.chooserLabel.textContent = boardName();
   els.board.classList.toggle('solved', state.solved);
   els.undo.disabled = state.moveStack.length === 0;
   els.redo.disabled = state.redoStack.length === 0;
@@ -216,6 +250,7 @@ function buildPicker(host, options) {
     button.setAttribute('aria-label', label);
     button.addEventListener('click', () => {
       onPick();
+      els.menu.hidePopover();
       board.focus();
     });
     host.append(button);
@@ -332,6 +367,12 @@ control(els.newGame, () => newGame());
 control(els.undo, undo);
 control(els.redo, redo);
 control(els.check, check);
+
+// Buttons do not carry popover state themselves, and a chooser that never says
+// it is open is a chooser a screen reader cannot describe.
+els.menu.addEventListener('toggle', (event) => {
+  els.chooser.setAttribute('aria-expanded', event.newState === 'open' ? 'true' : 'false');
+});
 
 buildPickers();
 mountBoard();

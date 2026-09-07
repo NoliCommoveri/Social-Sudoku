@@ -52,6 +52,7 @@ public/               the assets directory — everything here is served
       board.js        render + input for one board
       board.css       board and cell rules, shared by index.html and dev.html
       app.js          wiring, new-game, completion
+      celebrate.js    the win dialog: the words, the confetti, the two buttons
     store/
       local.js        localStorage read/write, versioned per-size keys
 test/                 not served
@@ -242,7 +243,30 @@ Chromebook has a keyboard and typing is faster than tapping, the phone does not.
 - **Check** (Q3) marks currently-wrong cells against the solution. Marks clear
   on the next edit.
 - **Completion** is detected on every edit: board full and equal to the
-  solution. Says so. Records nothing — there is nothing to record until slice 9.
+  solution. Records nothing — there is nothing to record until slice 9. It is
+  fired from the transition rather than from the render, so reopening a board
+  that was already finished does not congratulate you again. What it fires is
+  `ui/celebrate.js`.
+
+### `ui/celebrate.js`
+
+Finishing a puzzle is the reason for doing one, so it gets the middle of the
+screen: a modal dialog over a dimmed board, an exclamation in large type,
+confetti across the viewport, and two buttons — deal another, or dismiss and
+look at the finished grid. A line of status text saying *Solved.* is what a
+spreadsheet does.
+
+The line is drawn from a list and never repeats the previous one, and the list
+mixes registers deliberately — *Great job!* and *Bruh, you slayed!* are for the
+same popup, because the same popup has to land for a 5-year-old and a
+12-year-old and one of them thinks the first is what you say to a toddler. The
+subtitle names the board and how many squares were theirs, which is a better
+thing to be told than *solved*.
+
+It holds no game state. `app.js` decides when a puzzle is finished and hands it
+the subtitle and the two things to do next. Under `prefers-reduced-motion` the
+dialog and the words stay and the movement goes, because none of the movement
+is carrying the message (`../../design-language.md` §2).
 
 ### `store/local.js`
 
