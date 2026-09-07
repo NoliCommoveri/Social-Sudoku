@@ -20,11 +20,13 @@ are:
   editor and the shelf the games sit on, drawing from `public/shared/` — the
   tokens, the thirty avatars, the profile rules, and the four calls the client
   makes.
-- Pit at `/pit/`: the rules core, the bots, the local driver and the table —
-  `public/pit/`. One person picks how many bots sit down and plays rounds
-  against them on a phone. A seat left alone is taken over by a bot sixty
-  seconds later and reclaimed by a tap.
-- 304 tests under `test/`, run by GitHub Actions on every push.
+- Pit at `/pit/`: the rules core, the bots, the local driver, the table and the
+  round-end reveal — `public/pit/`. One person picks how many bots sit down and
+  plays rounds against them on a phone. A seat left alone is taken over by a bot
+  sixty seconds later and reclaimed by a tap. A corner opens the reveal — the
+  card in full art, every seat's final hand and the counts it offered — and
+  reaching the target draws the standings.
+- 316 tests under `test/`, run by GitHub Actions on every push.
 - A Worker, `carson-gameroom`, serving `public/` at a `.workers.dev` URL, built
   by Cloudflare's GitHub integration on push to `main`.
 - A D1 database, `gameroom`, holding the schema in `docs/architecture.md` §3.1,
@@ -35,9 +37,9 @@ are:
 
 No Durable Object and no stored results. Profiles are made, renamed and
 re-faced from the hub; nothing a player would miss has been written anywhere
-yet. Pit is played by typing its address: the round-end reveal, the
-end-of-session screen, the `plays` row and the game's tile on the shelf are
-session 4, and until that tile exists nothing on the front page links to it.
+yet. Pit is played by typing its address: the `plays` row and the game's tile on
+the shelf are the rest of session 4, and until that tile exists nothing on the
+front page links to it.
 
 ## The five things this is for
 
@@ -199,14 +201,19 @@ makes, which is what keeps `table.js` down to creating elements and reporting
 taps. Offering and accepting are the same two-tap mechanism against the hand,
 because the hand is the only place a commodity is ever named.
 
-**Session 4 is next**, and is
-[`docs/pit/specs/session-4-round-end-and-the-record.md`](docs/pit/specs/session-4-round-end-and-the-record.md):
-the round-end reveal with the full card art and the counts each seat offered,
-the end-of-session standings, the write path — a `plays` row opened at the deal
-and closed at the end, so an abandoned game is a row with no result — and the
-game's tile on the hub shelf. Large, ~100k, and the reveal is a committable
-stopping point on its own. §5.6's plain panel is the stub that lets rounds
-follow one another until then.
+**Session 4 is half built**, and is
+[`docs/pit/specs/session-4-round-end-and-the-record.md`](docs/pit/specs/session-4-round-end-and-the-record.md).
+The reveal, the ending and what the rules module owed them — §2, §3 and §4 —
+are in the tree: the full card art, every seat's final hand and the counts it
+offered, the standings with ranks and corners, `state.corners` as a session
+total, and `onComplete` as the driver's seventh method, which is how the client
+gets ranks without importing the rules module.
+
+**What is left is §5 and §6**, and they are the next session, Medium: the write
+path — `POST /api/plays` opening a row at the deal and `POST /api/plays/:id/end`
+closing it, so an abandoned game is a row with no result — and the game's tile on
+the hub shelf. The ending screen already says whether the session was written
+down; until the endpoint exists it says *Nothing to save.*
 
 ### Phase 6 — GameRoom
 

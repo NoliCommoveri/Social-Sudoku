@@ -52,7 +52,11 @@ export function createTable(root, { faces, onTarget }) {
   const chips = new Map();     // playerId -> node
   const rows = new Map();      // offer id -> node
   const slots = new Map();     // commodity -> node
+  const blocks = new Map();    // playerId -> reveal block
   let built = false;
+  // Which round's reveal is on screen, so the card's 300ms runs once per
+  // harvest rather than on every view push behind it.
+  let celebrated = null;
 
   /** One delegated listener rather than one per node, so rows stay cheap. */
   root.addEventListener('click', (event) => {
@@ -109,6 +113,68 @@ export function createTable(root, { faces, onTarget }) {
       node.append(art, count, ring);
       parts.hand.append(node);
       slots.set(slot.commodity, { node, count, ring });
+    }
+  }
+
+  /**
+   * One block per seat, in seat order, built once. The seats do not change for
+   * the length of a session, and **Next round** sits under a thumb: a node
+   * replaced under a finger cancels the tap that was landing on it.
+   */
+  function buildReveal(panel) {
+    const host = parts.panel.querySelector('.panel-seats');
+    for (const seat of panel.seats) {
+      const node = el('li', 'reveal');
+      const head = el('div', 'reveal-head');
+      const face = el('span', 'reveal-face');
+      face.innerHTML = avatarSvg(faces[seat.playerId] ?? '', { size: 32 });
+      const name = el('span', 'reveal-name', seat.name);
+      const note = el('span', 'reveal-note');
+      const score = el('span', 'reveal-score');
+      head.append(face, name, note, score);
+
+      const grid = el('div', 'reveal-hand');
+      const cells = new Map();
+      for (const slot of seat.hand) {
+        const cell = el('span', 'rslot');
+        cell.style.setProperty('--tint', slot.tint);
+        const art = el('img', 'rslot-art');
+        art.src = slot.art;
+        art.alt = slot.name;
+        art.decoding = 'async';
+        const count = el('span', 'rslot-count');
+        cell.append(art, count);
+        grid.append(cell);
+        cells.set(slot.commodity, { cell, count });
+      }
+
+      const counts = el('p', 'reveal-counts');
+      node.append(head, grid, counts);
+      host.append(node);
+      blocks.set(seat.playerId, { node, name, note, score, cells, counts });
+    }
+  }
+
+  function paintReveal(panel) {
+    if (blocks.size === 0) buildReveal(panel);
+    for (const seat of panel.seats) {
+      const block = blocks.get(seat.playerId);
+      block.node.classList.toggle('is-you', seat.you);
+      block.node.classList.toggle('is-harvester', seat.harvester);
+      block.name.textContent = seat.name;
+      block.score.textContent = String(seat.score);
+      block.note.textContent = seat.note ?? '';
+      for (const slot of seat.hand) {
+        const cell = block.cells.get(slot.commodity);
+        cell.count.textContent = String(slot.count);
+        cell.cell.classList.toggle('is-empty', slot.count === 0);
+        cell.cell.classList.toggle('is-ringed', slot.ringed);
+      }
+      // Six words of screen, and the only place a round's counts sit still
+      // long enough to be read. A seat that offered nothing shows nothing.
+      block.counts.textContent = seat.counts.length
+        ? `offered ${seat.counts.join(' · ')}${seat.more ? ' …' : ''}`
+        : '';
     }
   }
 
@@ -238,20 +304,34 @@ export function createTable(root, { faces, onTarget }) {
     }
 
     parts.panel.hidden = screen.roundEnd === null;
-    if (screen.roundEnd) {
+    if (screen.roundEnd === null) {
+      celebrated = null;
+    } else {
       const panel = screen.roundEnd;
-      const art = parts.panel.querySelector('.panel-art');
-      if (art.getAttribute('src') !== panel.art) {
-        art.src = panel.art;
-        art.alt = panel.commodityName;
+      const card = parts.panel.querySelector('.panel-card');
+      if (card.getAttribute('src') !== panel.card) {
+        card.src = panel.card;
+        card.alt = panel.commodityName;
       }
       parts.panel.style.setProperty('--tint', panel.tint);
-      parts.panel.querySelector('.panel-who').textContent = panel.yours
-        ? `You harvested ${panel.commodityName}`
-        : `${panel.name} harvested ${panel.commodityName}`;
+      parts.panel.querySelector('.panel-headline').textContent = panel.headline;
       parts.panel.querySelector('.panel-note').textContent = panel.note;
-      parts.panel.querySelector('.panel-next').disabled = !panel.canReady;
-      parts.panel.querySelector('.panel-next').textContent = panel.ready ? 'Waiting…' : 'Next round';
+      const next = parts.panel.querySelector('.panel-next');
+      next.disabled = !panel.canReady;
+      next.textContent = panel.ready ? 'Waiting…' : 'Next round';
+      paintReveal(panel);
+
+      // Once, as the panel opens, and nothing waits on it: the button above is
+      // already live and the backstop is already running.
+      if (celebrated !== screen.round) {
+        celebrated = screen.round;
+        card.classList.remove('is-dealt');
+        void card.offsetWidth;
+        if (MOTION()) card.classList.add('is-dealt');
+        // The blocks are the scroller, and a round that opens halfway down the
+        // one before it is a panel nobody trusts.
+        parts.panel.querySelector('.panel-seats').scrollTop = 0;
+      }
     }
   }
 

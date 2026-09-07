@@ -83,20 +83,28 @@
       <button type="button" class="btn btn-quiet" data-target="menu">Back to the game</button>
     </div>
 
-    <!-- Session 3's stub. The reveal grid, the full card art and the
-         celebration are session 4; without a Next round button here the round
-         advances only on the 30-second backstop. -->
+    <!-- The reveal. It covers everything but the seat strip, the seat blocks
+         are built once and scroll inside it, and Next round is live from the
+         first frame: nothing on this panel is behind an animation, and the
+         30-second backstop ends the round whether or not it is pressed. -->
     <div id="panel" class="panel" hidden>
-      <img class="panel-art" alt="">
-      <p class="panel-who"></p>
-      <p class="panel-note"></p>
+      <img class="panel-card" alt="" decoding="async">
+      <p class="panel-who">
+        <span class="panel-headline"></span>
+        <b class="panel-note"></b>
+      </p>
+      <ul class="panel-seats"></ul>
       <button type="button" class="panel-next btn btn-go" data-target="ready">Next round</button>
     </div>
   </section>
 
+  <!-- Play again is a link and stays one. It costs a document load and a
+       /api/players round trip, and it buys a table with no chance of holding
+       anything from the session before it. -->
   <section id="ended" class="screen pad" hidden>
     <h1 id="ended-title">That is the game.</h1>
     <ul id="ended-scores" class="scores"></ul>
+    <p id="ended-note" class="note" role="status" aria-live="polite"></p>
     <a class="btn btn-go" href="/pit/">Play again</a>
     <a class="btn" href="/">Gameroom</a>
   </section>
